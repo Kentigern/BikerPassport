@@ -1,0 +1,297 @@
+Number,Name,Address,image_file
+1,Crempog Mon Anglesey,"Lon P Y Cudyn, Benllech, Tyn-y-Gongl, LL74 8TL",img001.pdf
+2,Llygad Yr Haul,"90 High Street, Llanberis, Caernarfon, LL55 4SU",img001.pdf
+3,Llwy A Mwy,"1 Water Street, Penygroes, Caernarfon, LL54 6LR",img001.pdf
+4,Siop A Caffi Traeth Becws Islyn,"Nefyn, Pwllheli, LL53 6ED",img001.pdf
+5,Mor A Mynydd,"Canolfan Fenter Congl Meinciau, Botwnnog, Pwllheli, LL53 8RA",img001.pdf
+6,Caffi Siabod,"Eisteddfa Fishery, Pentrefelin, Criccieth, LL52 0PT",img001.pdf
+7,Siop A Chaffi Llanfrothen,"Llanfrothen, Penrhyndeudreath, LL48 6AQ",img001.pdf
+8,Y Gegin Gefn,"Prysor Service Station, Blaenau Ffestiniog, LL41 4TW",img001.pdf
+9,Lakeside Cafe,"Power Station, A496, Blaenau Ffestiniog, LL41 3TP",img001.pdf
+10,Conwy Falls Cafe,"Pentrefoelas, Betws-y-Coed, LL24 0PN",img001.pdf
+11,Whistlestop Café,"HTM Business Park, Abergele Road, Rhyl, LL18 5UZ",img001.pdf
+12,Billy Jeans Café,"Unit 2, The Haven, The Nant, Holywell, CH8 8BD",img001.pdf
+13,Chocks Away Diner,"Aviation Park, Flint Road, Chester, CH4 0GZ",img002.pdf
+14,Old Stores Motorbike Cafe,"Pontblyddyn, Mold, CH7 4HR",img002.pdf
+15,Chain And Sprocket,"Hen Lon Parcwr, Ruthin, LL15 1LY",img002.pdf
+16,Wrexham Miners Project Cafe,"3 Maesgwyn Road, Wrexham, LL11 2AP",img002.pdf
+17,Aqueduct Diner,"Holyhead Road, Froncysyllte, Llangollen, LL20 7RA",img002.pdf
+18,Rhug Farm Shop,"Rhug Estate, Corwen, LL21 0EH",img002.pdf
+19,Bwyd A Ni,"Cental Buildings, Cerrig-y-Druidion, Corwen, LL21 9SW",img002.pdf
+20,Caffi Woody's Café,"2 Pensarn Road, Bala, LL23 7YE",img002.pdf
+21,Yr Hen Efail,"4 Green Lane, Dolgellau, LL40 1DL",img002.pdf
+22,Beachside Cafe,"6 Marine Parade, Tywyn, LL36 0DE",img002.pdf
+23,The Sands,"High St, Borth, SY24 5LH",img002.pdf
+24,Prom Diner,"Marine Terrace, Aberystwyth, SY23 2BX",img002.pdf
+25,Cletwr,"Tal-y-wern, Machynlleth, SY20 8PN",img003.pdf
+26,Caffi Glyndwr,"69 Heol Maengwyn, Machynlleth, SY20 8EE",img003.pdf
+27,Dyffryn Café And Restaurant,"Foel, Welshpool, SY21 0NU",img003.pdf
+28,Dafarn Newydd Village Stores,"Dafarn Newydd, Llanwddyn, SY10 0LT",img003.pdf
+29,Welshpool & Llanfair Light Railway Tea Room,"Llanfair Caereinion, SY21 0SF",img003.pdf
+30,Inglenook Cafe,"Union Street, Welshpool, SY21 7PG",img003.pdf
+31,Lion Bites,"Pool Road, Newtown, SY16 3AG",img003.pdf
+32,Seasons Café,"Llwyn Afon Field, Caersws, SY17 5SA",img003.pdf
+33,Riverside Café,"Llanidloes, Dolwen, SY18 6LX",img003.pdf
+34,Woodlands Cafe,"A4120, Devils Bridge, Aberystwyth, SY23 3JW",img003.pdf
+35,Ty Penbont,"Penbont House, Elan Valley, Rhayader, LD6 5HS",img003.pdf
+36,Ty Morgans,"East Street, Rhayader, LD6 5BH",img003.pdf
+37,Crossgates Cafe,"Llanbadarn Fawr, Crossgates, Llandrindod Wells, LD1 6RE",img004.pdf
+38,The Fforest Inn,"Llanfihangel-nant-Melan, Presteigne, LD8 2TN",img004.pdf
+39,The Old Railway Line Garden Centre,"Three Cocks, Brecon, LD3 0SG",img004.pdf
+40,Siop Llangors Shop,"Llangors, Brecon, LD3 7UA",img004.pdf
+41,Talybont Stores,"Talybont-on-Usk, Brecon, LD3 7YJ",img004.pdf
+42,Delboys,"A40, Llanspyddid, Brecon, LD3 8PB",img004.pdf
+43,The Owls Nest,"Lower Road, Llandovery, SA20 0DJ",img004.pdf
+44,Coffi A Bara,"Unit 4, Clos Twm Sion Cati, Tregaron, SY25 6JX",img004.pdf
+45,Moody Cow Bistro At Moody Meadows,"Bargoed Farm, Llwyncelyn, SA46 0HL",img004.pdf
+46,Teifi Chips,"Emlyn Square, Newcastle Emlyn, SA38 9BG",img004.pdf
+47,Waters Edge Cafe,"Hoel Pentraeth, Aberporth, SA43 2DD",img004.pdf
+48,Station Cafe,"Station Road, Cardigan, SA43 3AD",img004.pdf
+49,Yacht Club Cafe,"Quay Street, Lower Town, Fishguard, SA65 9NB",img005.pdf
+50,The Victoria Inn,"Roch, Haverfordwest, SA62 6AW",img005.pdf
+51,Halfway Cafe Johnston,"Pope Hill, Haverfordwest, SA62 3NX",img005.pdf
+52,Cresselly Arms,"Cresswell Quay, Kilgetty, SA68 0TE",img005.pdf
+53,Roadhouse,"Abbey Road, Whitland, SA34 0LG",img005.pdf
+54,The Stone Range,"Brook, Laugharne, SA33 4NX",img005.pdf
+55,Hagans Cafe And Chip Shop,"2 Pensarn Road, Carmarthen, SA31 2BS",img005.pdf
+56,White Hart Inn,"36 Carmarthen Road, Llandeilo, SA19 6RS",img005.pdf
+57,Fu3l Tank,"Unit 5, Llyg Glas, Ammanford, SA18 3EZ",img005.pdf
+58,Unit 7,"Burry Road, Llanelli, SA15 2DS",img005.pdf
+59,Smugglers Gift Shop,"Port Eynon, SA3 1NN",img005.pdf
+60,Chap In The Box,"Derwen Fawr Road, Blackpill, Swansea, SA3 5AS",img005.pdf
+61,Ystradowen Community Centre,"38 New Road, Ystradowen, SA9 2YY",img006.pdf
+62,Lle Tarw,"Brecon Road, Ynyswen, Swansea, SA9 1YR",img006.pdf
+63,The Basin Cafe,"Canal Car Park, Resolven, Neath, SA11 4BZ",img006.pdf
+64,Garw Valley Cafe,"Church Street, Blaengarw, Bridgend, CF32 8BF",img006.pdf
+65,Somerset Arms,"Commercial Road, Port Talbot, SA13 1LP",img006.pdf
+66,Lilly's At CMC Thunder Road,"Tremains Road, Bridgend, CF31 1UA",img006.pdf
+67,The Good Shack,"Heritage Business Park, Llantwit Major, CF61 1YU",img006.pdf
+68,Larry's Coffee,"Knap Car Terrace, Barry, CF62 6FF",img006.pdf
+69,Baffle Haus,"Old Post Inn, Swansea Road, Bonvilston, CF5 6TQ",img006.pdf
+70,Case Cafe Miskin,"Miskin Manor Business Centre, Miskin, CF72 8ND",img006.pdf
+71,Case Cafe Bedwas,"Bedwas, Caerphilly, CF83 8JG",img006.pdf
+72,Mam's Kitchen,"61 Rheola Street, Penrhiwceiber, CF45 3TB",img006.pdf
+73,The Mountain Air,"Llwynhelyg, Tredegar, NP22 3SD",img007.pdf
+74,The Boatyard Tea Room,"Pontymoile Marina, Fountain Road, Pontypool, NP4 8ER",img007.pdf
+75,The Glascoed,"Monkswood, Usk, NP15 1QE",img007.pdf
+76,Baffle Haus,"The Cedars, Goytre, Pontypool, NP4 0AD",img007.pdf
+77,Penelope's Café,"Goytre Wharf, Llanover, Abergavenny, NP7 9EW",img007.pdf
+78,Roadhouse Llanwenarth,"Brecon Road, Abergavenny, NP8 1EP",img007.pdf
+79,Caldicot Castle,"Church Road, Caldicot, NP26 4HU",img007.pdf
+80,The Old Station Tearooms,"Medhope, Brockweir, Tintern, NP16 7NX",img007.pdf
+81,Vintage Metals Ltd / Piston Grinds,"Mushet Business Centre, Crucible Close, Coleford, GL16 8RE",img008.pdf
+82,Silver Fox Café,"Broadoak, Newnham on Severn, GL14 1JA",img008.pdf
+83,Oily Rag,"Metz Way, Gloucester, GL1 1AJ",img008.pdf
+84,Smokinly Good BBQ,"Unit 64, Basepoint, Oakfield Close, Tewkesbury, GL20 8SD",img008.pdf
+85,Mr Watsons Café,"72 Northwick Business Centre, Blockley, GL56 9RF",img008.pdf
+86,Revs Automobilia,"A429 Fosseway, Stretton on Fosse, GL56 9RE",img008.pdf
+87,Cotswold Café / Pat's Baps,"London Road, Moreton in Marsh, GL56 0RR",img008.pdf
+88,Cotswold Barn,"Longborough, Moreton in Marsh, GL56 0QZ",img008.pdf
+89,The Classic Motor Hub,"Old Walls, Ablington, Bibury, GL7 5FF",img008.pdf
+90,Lynwood & Co,"Market Place, Lechlade, GL7 3AD",img008.pdf
+91,The Wild Olive,"Butts Farm, Cricklade Road, Cirencester, GL7 5QE",img008.pdf
+92,Glider Cafe,"Cowcombe Hill, Chalford, Stroud, GL6 8GY",img008.pdf
+93,The Globe,"43 High Street, Stonehouse, GL10 2NG",img009.pdf
+94,Leaf And Ground,"Dursley Road, Dursley, GL11 6PP",img009.pdf
+95,Westcountry Choppers At Explorers Hangout,"Unit 25F, Merton Road, Bishopston, Bristol, BS7 8TL",img009.pdf
+96,Harry's Cafe At Fowlers,"2-12 Bath Road, Bristol, BS4 3DR",img009.pdf
+97,Ells Kitchen,"Folly End Farm, Chippenham, SN14 8JR",img009.pdf
+98,Malmesbury Garden Centre,"Crudwell Road, Malmesbury, SN16 9JL",img009.pdf
+99,Chippenham Pit Stop,"Oakleigh Acres M4 Motorway, Draycot Cerne, Chippenham, SN15 5LH",img009.pdf
+100,Unhenged Coffee Shop & Cafe,"Beckhampton Road, Marlborough, SN8 1RD",img009.pdf
+101,Time At The Forge,"1 South Street, Aldbourne, Marlborough, SN8 2DW",img009.pdf
+102,Choppers,"A338, Burbage, Marlborough, SN8 3RT",img009.pdf
+103,Chefs Delight,"14 Station Road, Tidworth, SP9 7NZ",img009.pdf
+104,Spitfire Kitchen,"Warner House, Salisbury, SP51 3TB",img009.pdf
+105,The Hook And Glove,"The Street, Farley, Salisbury, SP5 1AB",img010.pdf
+106,Deus Ex Machina - The Lodge Of Heavy Leisure,"23 Argyle Road, Boscombe, Bournemouth, BH5 1EB",img010.pdf
+107,Bikers Loft,"11 Ventura Place, Poole, BH16 5SW",img010.pdf
+108,Rivo's Hub,"Sandford, Wareham, BH20 7AE",img010.pdf
+109,The Worlds End,"Almer, Blandford Forum, DT11 9EW",img010.pdf
+110,The View Coffee Shop And Canteen,"Sports Club, Hoggens Down, Milton Abbas, Blandford, DT11 0BB",img010.pdf
+111,Lore Of The Sky At Compton Abbas Airfeild,"Compton Abbas Airfield, Salisbury, SP5 5AP",img010.pdf
+112,Hillside Cafe,"Codford, Warminster, BA12 0JZ",img010.pdf
+113,The Old Brewery Cafe And Kitchen,"Wyke Road, Gillingham, SP8 4NW",img010.pdf
+114,The Bridge Bakery,"The Bridge, Westover Trading Estate, Langport, TA10 9RB",img010.pdf
+115,No 5 Diner,"1 Kingfisher Close, Gazelle Road, Yeovil, BA20 2PJ",img010.pdf
+116,Wardon Hill Trading Post,"Long Ash Lane, Dorchester, DT2 9PW",img010.pdf
+117,Jailhouse Diner,"106 Grove Road, Grove, Portland, DT5 1DZ",img011.pdf
+118,Quayside Cafe,"Axmouth Harbour, Seaton, EX12 4AA",img011.pdf
+119,Park Hotel,"114 Exeter Road, Exmouth, EX8 1QH",img011.pdf
+120,Josie's,"The Jolly Roger, The Mill, St Johns Lane, Bovey Tracey, TQ13 9FF",img011.pdf
+121,Baffles Cafe At Davant Bikes,"Broomhill Way, Torquay, TQ2 7QL",img011.pdf
+122,Waterside Inn,"128 Dartmouth Road, Goodrington, Paignton, TQ4 6ND",img011.pdf
+123,Re-Charge At Rainbow Moto,"7-11 Cattewater Road, Faraday Mill Trading Estate, Plymouth, PL4 0SF",img011.pdf
+124,Pit Stop Cafe,"1 Eagle Road, Plympton, Plymouth, PL7 5JY",img011.pdf
+125,Louis Tea Room,"Kit Hill, Callington, PL17 8AX",img011.pdf
+126,Coby's Coffee Shop,"The Chapel, Fletchersbridge, Bodmin, PL30 4AN",img011.pdf
+127,Project Eighty Three,"Unit 2, Wesley Yard, Newquay, TR7 1LB",img011.pdf
+128,Highway 39 Cafe And Lounge,"Titchsborough Hill, Otterham Station, Camelford, PL32 9SW",img011.pdf
+129,North Cornwall Motorcycles,"1 Kings Hill, Bude, EX23 8PW",img012.pdf
+130,The Currant Bun,"Sourton Cross Services, Okehampton, EX20 4LY",img012.pdf
+131,Union Road Moto Velo,"1 Union Road, Crediton, EX17 3AL",img012.pdf
+132,Cafe 53,"Bridge Motorcycles Ltd, Alphin Brook Road, Marsh Barton, Exeter, EX2 8RG",img012.pdf
+133,Helen's Diner,"Hitchcocks Business Park, Willand, Cullompton, EX15 3FA",img012.pdf
+134,Log Cabin Diner,"Moortown Barton, Knowstone, South Molton, EX36 4RZ",img012.pdf
+135,Riverside Country Club,"Marsh Lane, South Molton, EX36 3HQ",img012.pdf
+136,Withypool Tea Rooms,"Withypool, Exmoor, TA24 7BF",img012.pdf
+137,No.1 Lynton The Coffee Lounge,"1 Castle Hill, Lynton, EX35 6JA",img012.pdf
+138,Tilly's At Oakfield Farm,"Wiveliscombe Road, Norton Fitzwarren, Taunton, TA4 1BY",img012.pdf
+139,Leather & Lace Bar And Grill,"114 Broadway, Chilton Polden, Bridgwater, TA7 9EW",img012.pdf
+140,Wookey Hub,"High Street, Wookey, Wells, BA5 1JZ",img012.pdf
+141,Cafe 33,"11 Weston Road, Burnham-on-Sea, TA8 2RL",img013.pdf
+142,The Hidden Cafe,"Howard Way, Newport Pagnell, MK16 9PY",img014.pdf
+143,The Larder,"Manor Farm, Bourton, Buckingham, MK18 7DS",img014.pdf
+144,Whitewaters Deli Cafe,"5 Chiltern Court, Backstreet, Wendover, HP22 6EP",img014.pdf
+145,On Yer Bike Cafe,"A41 Bicester Road, Westcott, Bicester, HP18 0JX",img014.pdf
+146,Motorsportopia,"Bicester Road Service Station, Marsh Gibbon, OX27 0EU",img014.pdf
+147,The Saucy Hound,"The Pig Place, NB Acres, Aynho Road, Adderbury, Banbury, OX17 3NU",img014.pdf
+148,Kingsley Cafe,"Eynsham, Witney, OX29 4EF",img014.pdf
+149,Lynwood & Co,"134 High Street, Burford, OX18 4QU",img014.pdf
+150,Lynwood & Co,"3 Bridge Street, Bampton, OX18 2HA",img014.pdf
+151,Kickstand (Lotus Cafe),"2 London Street, Faringdon, SN7 7AA",img014.pdf
+152,Munchies Of Grove,"10 Millbrook Square, Grove, Wantage, OX12 7JZ",img014.pdf
+153,Greenham Control Tower & Cafe,"Burys Bank Road, Newbury Thatcham, RG19 8BZ",img014.pdf
+154,Too Fast Too Filling,"The Commercial Centre, Picket Piece, Andover, SP11 6RU",img015.pdf
+155,Crown Inn,"Romsey Road, King's Somborne, Stockbridge, SO20 6PW",img015.pdf
+156,Loomies,"Alton Road, Petersfield, GU32 1JX",img015.pdf
+157,Fuel Stop Cafe,"A27 West Bound, Chichester, PO20 1QH",img015.pdf
+158,The Lookout,"Lepe Country Park, Exbury, Southampton, SO45 1AD",img015.pdf
+159,Tea Rooms,"Sammy Miller's Museum, Bashley Cross Road, New Milton, BH25 5SZ",img015.pdf
+160,Emma's Cafe,"Pure Triumph, George Street, Woburn, MK17 9PY",img016.pdf
+161,Brewpoint Bedford,"Cut Throat Lane, Fairhill, Bedford, MK41 7FY",img016.pdf
+162,Amici Coffee,"Girtford Bridge House, Sandy, SG19 1NA",img016.pdf
+163,Veloce Club,"5 Bury Mead Road, Hitchin, SG5 1RT",img016.pdf
+164,Cafe Riverside Omelette House,"Frogge Street, Ickleton, Saffron Walden, CB10 1SH",img016.pdf
+165,TTT Motorcycle Village & Cafe,"Unit 6, Bulmer Road Industrial Estate, Bulmer Road, Sudbury, CO10 7HJ",img016.pdf
+166,Angel Cafe,"1 Baldry's Yard, Fair Green, Diss, IP22 4NQ",img016.pdf
+167,Grumpy's Cafe,"The Old Mill, Earsham, NR35 2TQ",img016.pdf
+168,Jester's Diner,"1 Normanston Park, Peto Way, Normanston, Oulton Broad, Lowestoft, NR32 2QB",img016.pdf
+169,Joylands American Family Diner,"Marine Parade, Great Yarmouth, NR30 2DL",img016.pdf
+170,Blue Sky Coffee House,"Runton Road, Cromer, NR27 9AU",img016.pdf
+171,Blackham Station Cafe,"Station Road, Reepham, Norwich, NR10 4LJ",img016.pdf
+172,Hilltop Cafe And Stone Hill Bistro,"11 Stone Hill, Rackheath, Norwich, NR13 6LX",img017.pdf
+173,Ellie-Mais Cafe,"Unit 1, Brooke Industrial Park, Norwich Rd, Brooke, Norwich, NR15 1HJ",img017.pdf
+174,Caren's Cabin,"A47 Southern by Pass, Norwich, NR9 3LZ",img017.pdf
+175,Walkers Snacks,"A1065 Barton Mills, Bury St Edmunds, IP28 6AE",img017.pdf
+176,Ruby Cooper's Coffee House,"Bodsey Toll Farm, Bodsey Toll Road, Ramsey, Huntingdon, PE26 2XH",img017.pdf
+177,The Shed Tap Room & Deli,"Unit 2, Sand Martin House, Bittern Way, Peterborough, PE2 8TY",img017.pdf
+178,Ma Baker's Café,"Prees Heath, Whitchurch, SY13 3JT",img018.pdf
+179,Dragon Soul Biker Café,"Forton Road, Newport, TF10 7JR",img018.pdf
+180,Crust & Crumbs,"Dale End, Coalbrookdale, Telford, TF8 7DS",img018.pdf
+181,Allscott Cafe,"Shawbirch Road, Telford, TF6 5EQ",img018.pdf
+182,Fast-Trak Diner,"14 Yeomanry Road, Shrewsbury, SY1 3EH",img018.pdf
+183,The Montford Bridge Café,"Montford Bridge, Shrewsbury, SY4 1EB",img018.pdf
+184,The Little Cafe,"54 High Street, Church Stretton, SY6 6BX",img018.pdf
+185,Herbie's,"New Street, Bishops Castle, SY9 5DQ",img018.pdf
+186,Laila's Cafe,"Next to Harry Tuffins Supermarket, Craven Arms, SY7 9QD",img018.pdf
+187,Cross On The Hill,"Cleehill, Ludlow, SY8 3LZ",img018.pdf
+188,Mr Thoms,"25A Terme Street, Tenbury Wells, WR15 8AE",img018.pdf
+189,Barons Cross Inn & Campsite,"Barons Cross Road, Leominster, HR6 8RS",img018.pdf
+190,Megs - The Hotspur Cafe,"Shobdon Airfield, Shobdon, HR6 9ND",img019.pdf
+191,Route 44 Diner,"Waterloo Road, Kington, HR5 3DE",img019.pdf
+192,HR4K,"Unit 12A Thorn Business Park, Hereford, HR2 6JT",img019.pdf
+193,The Treehouse,"By the Wye, Hay on Wye Hereford, HR3 5RS",img019.pdf
+194,Oldfield Forge Cafe,"Old Field Farm, Garaway Hill, Hereford, HR2 8HA",img019.pdf
+195,Pencraig Diner/A40 Cafe,"Pencraig View, Ross-on-Wye, HR9 6HR",img019.pdf
+196,Sally's Place,"Wynds Point, Upper Colwall, Malvern, WR13 6DW",img019.pdf
+197,Anchor Inn,"Anchor Lane, Fladbury, Pershore, WR10 2PY",img019.pdf
+198,Legacy Moto,"Beeches Barn, Bransford, WR6 5JN",img019.pdf
+199,Bringsty Vintage Café,"Bringsty Common, Bringsty, WR6 5UJ",img019.pdf
+200,Midwest Moto,"Ribbesford Road, Stourport-on-Severn, DY13 0TF",img019.pdf
+201,Poole Hall Fisheries,"Dodds Green, Alveley, WV15 6JD",img019.pdf
+202,Our Plaice,"216 Dudley Road, Halesowen, B63 3NJ",img020.pdf
+203,The Mann Cave Upstairs,"Chas Mann Motorcycles Ltd, 70 The Green, Kings Norton, B38 8RU",img020.pdf
+204,Piston Club,"The Stag at Redhill, Alcester Rd, Stratford upon Avon, B49 6NQ",img020.pdf
+205,Touchdown Café,"Loxley Lane, Wellesbourne, CV35 9EU",img020.pdf
+206,Gilks' Garage Café,"Banbury Road, Kineton, CV35 0JZ",img020.pdf
+207,Long Itch Diner,"Southam Road, Long Itchington, CV47 9QZ",img020.pdf
+208,Crown Inn,"Henley Road, Claverdon, Warwick, CV35 8LJ",img020.pdf
+209,Jo's Snax,"Jack O Watton Industrial Estate, Lichfield Road, Water Orton, Birmingham, B46 1NU",img020.pdf
+210,River & Roads Cafe,"Unit 1, Alder Mill Business Park, Sheepy Road, Atherstone, CV9 3AH",img020.pdf
+211,Jasper's Coffee Shop,"Swan House, Bosworth Hall Estate, The Park, Market Bosworth, Nuneaton, CV13 0LJ",img020.pdf
+212,Swan Inn,"Fradley Junction, Burton-on-Trent, DE13 7DN",img020.pdf
+213,Burton Banter,"Unit 10 Windsor Ind Est, Hawkins Lane, Burton, DE14 1QF",img020.pdf
+214,Flights & Bites,"Tatenhill Airfield, Newborough Road, Needwood, Burton on Trent, DE13 9PD",img021.pdf
+215,The Bakehouse,"Staffordshire Traditional Meats, Spath Farm, Uttoxeter, ST14 5AP",img021.pdf
+216,Castlewoods Café / K1,"Stafford Road, Stafford, ST18 0LP",img021.pdf
+217,Taylor Motorcycles,"Haughton Garage, Brazenhill Lane, Haughton Stafford, ST18 9HR",img021.pdf
+218,Westbury Tavern,"Westbury Road, Clayton, Newcastle-under-Lyme, ST5 4JW",img021.pdf
+219,Staffordshire Sizzler,"525 High Street, Stoke on Trent, ST6 5PB",img021.pdf
+220,Glossop Cafeteria,"13 Victoria Street, Glossop, SK13 8HT",img022.pdf
+221,Hope Tearooms,"Hope Road, Hope, S33 6RH",img022.pdf
+222,The Anchor Inn,"Four Lanes' End, Tideswell, Buxton, SK17 8RB",img022.pdf
+223,Grindleford Station Cafe,"Upper Padley, Grindleford, S32 2JA",img022.pdf
+224,The Brew Time Cafe & Bar,"390A Sheffield Road, Chesterfield, S41 8LF",img022.pdf
+225,Quackers,"Thirnbridge Hall, Ashford in the Water, Bakewell, DE45 1NZ",img022.pdf
+226,Old Smithy Tearooms & Restaurant,"Church Street, Monyash Bakewell, DE45 1JH",img022.pdf
+227,Flash Bar Cafe & Stores,"The Annexe, Buxton, SK17 0TF",img022.pdf
+228,Mini Beans On The Lake,"Reacliffe Road, Leek, ST13 8RS",img022.pdf
+229,Matlock Moto,"160/168 South Parade, Matlock, DE4 3NR",img022.pdf
+230,Chequered Flag Cafe,"Darley Moor Race Circuit, Ashbourne, DE6 2ET",img022.pdf
+231,Factory Heads Cafe,"Donington Park Circuit, Castle Donington, Derby, DE74 2RP",img022.pdf
+232,Lisa's Diner A6,"Derby Road, Loughborough, LE11 5UU",img023.pdf
+233,Victoria Biker's Pub,"Whitwick Road, Coalville, LE67 3FA",img023.pdf
+234,Cutting Garden Cafe,"Jubilee Business Park, 7 Snarestone Road, Appleby Magna, Swadlincote, DE12 7AJ",img023.pdf
+235,Huggy's Speedshop,"Unit 2 Mallory Park Race Centre, Church Road, Kirkby Mallory, LE9 7QE",img023.pdf
+236,Triumph 1902 Cafe,"Normandy Way, Hinkley, LE10 3BZ",img023.pdf
+237,Nemos At Stoney Cove,"Sapcote Road, Stoney Stanton, Leicester, LE9 4DW",img023.pdf
+238,Pistons And Rings,"Skylark Country Venue, Shuckburgh Road, Daventry, NN11 6JY",img023.pdf
+239,Jacks Hill Cafe And Truck Stop,"A5 Watling Street, Towcester, NN12 8ET",img023.pdf
+240,Refuel Coffee Shop,"3 Quorn Way, Northampton, NN1 2PN",img023.pdf
+241,Sycamore Cafe,"Billing Garden Village, The Causeway, Great Billing, Northampton, NN3 9EX",img023.pdf
+242,The Pilot's Mess,"Airport Business Park, Wellingborough Road, Sywell, Northampton, NN6 0BN",img023.pdf
+243,Dam Good Dough,"Nene Court, Embankment, Wellingborough, NN8 1LD",img023.pdf
+244,New Lodge Farm Bulwick,"Rockingham Forest, Laxton Road, Corby, NN17 3DU",img024.pdf
+245,Welcome Cafe,"Tilton Road, Twyford and Thorpe, Leicester, LE14 2HZ",img024.pdf
+246,Lily's Lavender Hut,"11 Market Place, Corby Glen, Grantham, NG33 4NH",img024.pdf
+247,Ollie's At Unique Cottage And Cafe,"Fulney Lane South, Spalding, PE12 6FA",img024.pdf
+248,Unicorns & Riderz Bar And Grill,"7 Hoddins Way, Long Sutton, Spalding, PE12 9JB",img024.pdf
+249,Cheles & Max's Country Kitchen,"A17, Cranwell and Byards Leap, Sleaford, NG34 8EY",img024.pdf
+250,Seaview Cafe,"Sea View Car Park, Quebec Road, Mablethorpe LN12 1LT",img024.pdf
+251,The Granary Tea Room,"Bardney Road, Wragby LN8 5QZ",img024.pdf
+252,Jenny's Cafe,"38 Brigg Road, Hibaldstow, Brigg, DN20 9PD",img024.pdf
+253,Revs & Relics,"77 Blyth Road, Maltby, S66 7LF",img024.pdf
+254,Green Hut Cafe,"Worksop Road, Ollerton, NG22 9DR",img024.pdf
+255,Nitro Diner,"Kirkby Lane Works, Pinxton, NG16 6JA",img024.pdf
+256,The Sandwich Bar/Grill Sisters,"312 Hucknall Lane, Nottingham, NG6 8AB",img025.pdf
+257,The Wolds,"Loughborough Road, West Bridgford, Nottingham, NG2 7HZ",img025.pdf
+258,Bear Pit Cafe,"Ferry Road, Eastham, Birkenhead, CH62 0AU",img026.pdf
+259,Cafe On The Hill,"Chester Road, Frodsham, WA6 0NT",img026.pdf
+260,Swannie's Kitchen,"Bill Smith Motors, Whitchurch Road, Christleton, Chester, CH3 6AE",img026.pdf
+261,Berries,"Nantwich Road, Wrenbury, Nantwich, CW5 8EW",img026.pdf
+262,Rookery Wood Farm,"Weston Road, Crewe, CW1 6NE",img026.pdf
+263,The Hub,"Old Town Hall, Widnes, WA8 7QZ",img026.pdf
+264,BGS Cafe Bar,"Bikergear Superstore, Longford Street Warrington, WA2 7PG",img026.pdf
+265,Farmhouse Kitchen Worsley,"Off Astley Park Way, Chaddock Lane, Worsley, Tyldesley M28 1FJ",img026.pdf
+266,The Dam Bar & Grill,"Garswood Old Road, Saint Helens, WA11 7LZ",img026.pdf
+267,Area 51 Coffee,"Southport Road, Scarisbrick, Ormskirk, L40 8HF",img026.pdf
+268,The Gasket,"Skull House Lane, Appleby Bridge, WN6 9DR",img026.pdf
+269,Leyland Heritage Cafe,"King Street, Leyland, PR25 2LE",img026.pdf
+270,Lakeside Cafe,"Ball Grove Drive, Colne, BB8 7HY",img027.pdf
+271,The Three Horses,"Fell Lane, Keighley, BD22 6BZ",img027.pdf
+272,Dick Turpins,"Lay-by A59, Horton, Skipton, BD23 3JP",img027.pdf
+273,Dalesway Cafe,"A59 Harrogate Road, Skipton, BD23 6AB",img027.pdf
+274,The Retreat,"14-16 Main Street, Grassington, BD23 5AA",img027.pdf
+275,Coffee In The Cave,"The Cellar, Town Hall, Market Place, Settle, BD24 9EJ",img027.pdf
+276,Riverbank Tearooms,"23 Chapel Street, Slaidburn, Clitheroe, BB7 3ES",img027.pdf
+277,Puddleducks Tea Room,"Dunsop Bridge, Clitheroe, BB7 3BB",img027.pdf
+278,Wild Buck,"Clitheroe Road, Waddington, Clitheroe, BB7 3HP",img027.pdf
+279,Chipping Farm Shop,"Wilsden, Garstang Road, Chipping, Preston, PR3 2QH",img027.pdf
+280,Lock Keepers Rest,"Tithebarn Hill, Glasson Dock, Lancaster, LA2 0BY",img027.pdf
+281,Bull Beck Snack Bar,"Bull Beck Picnic Site, Brookhouse, Lancaster, LA2 9QR",img027.pdf
+282,Seasons Bakery,"Ingleton Old Middle School, Ingleton, LA6 3BU",img028.pdf
+283,The Tee Room,"Casterton Golf Club, Casterton, Kirkby Lonsdale, LA6 2LA",img028.pdf
+284,Herdwicks,"Yewdale Road, Coniston, LA21 8DU",img028.pdf
+285,The Copper Kettle,"Galway House, Reeth, Richmond, DL11 6TH",img028.pdf
+286,The Nook Farmshop & Cafe,"Epiacum Roman Fort, Alston, CA9 3BG",img028.pdf
+287,Castle Cafe Withernsea,"10 Pier Road, Withernsea, HU19 2JS",img029.pdf
+288,Zoom Cafe Bar,"South Cave Business Park, Sand Lane, South Cave, Brough, HU15 2JQ",img029.pdf
+289,Wheels Cafe Sykehouse,"The Old George Inn, Doncaster, DN14 9AU",img029.pdf
+290,The Bay Horse,"Bradford Road, East Ardsley, Wakefield, WF3 2HQ",img029.pdf
+291,The Motorist,"New Lennerton Road, Sherburn in Elmet, Leeds, LS25 6JE",img029.pdf
+292,Monkey Pot Cafe,"Riccall Airfield Industrial Estate, Market Weighton Road, Selby, YO8 5LD",img029.pdf
+293,Strawberry Fields Cafe,"Crockley Hill, York, YO19 4SJ",img029.pdf
+294,Seaways Of Fridaythorpe,"Fimber Road, Fridaythorpe, Driffield, YO25 9RX",img029.pdf
+295,Hall Bros Motorcylces,"Lancaster Road, Bridlington, YO15 3QY",img029.pdf
+296,Warley Cross Cafe,"Brandesburton, Driffield, YO25 8EW",img029.pdf
