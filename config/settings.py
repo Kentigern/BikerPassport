@@ -39,6 +39,16 @@ ALLOWED_HOSTS = [
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_SSL_REDIRECT = not DEBUG
 
+# The proxy's *internal* forwarding also uses its own Railway-assigned
+# hostname (e.g. web-production-xxxx.up.railway.app) as the Host header it
+# sends to the app, not the custom domain the visitor actually typed —
+# that original host is preserved separately in X-Forwarded-Host. Without
+# this, any absolute URL Django builds itself (e.g. the SECURE_SSL_REDIRECT
+# redirect below) uses the internal Railway hostname instead of the custom
+# domain, which is exactly what a visitor bouncing between the two domains
+# was seeing.
+USE_X_FORWARDED_HOST = True
+
 # Needs the full https://host — e.g. https://your-app.up.railway.app —
 # not just the hostname (that's what ALLOWED_HOSTS is for).
 CSRF_TRUSTED_ORIGINS = [
