@@ -4,10 +4,17 @@ from simple_history.admin import SimpleHistoryAdmin
 from .models import Bearer, PassportSubmission, Season, Venue
 
 
-class AdminOnlyMixin:
-    """Restricts a model to the Admin role (§3): cafe list, seasons, staff
-    accounts and retention/purge are Admin-only; ordinary staff/volunteers
-    only need read access here, not edit rights."""
+class SuperuserOnlyMixin:
+    """Hides a model entirely from everyone but superusers, regardless of any
+    group permissions granted — used for Bearer, where phone/email/address
+    must not be casually browsable. Staff reach bearer records only through
+    the intake form's phone-gated search, never through this admin (§5.2)."""
+
+    def has_module_permission(self, request):
+        return request.user.is_superuser
+
+    def has_view_permission(self, request, obj=None):
+        return request.user.is_superuser
 
     def has_add_permission(self, request):
         return request.user.is_superuser
@@ -19,27 +26,14 @@ class AdminOnlyMixin:
         return request.user.is_superuser
 
 
-class SuperuserOnlyMixin(AdminOnlyMixin):
-    """Like AdminOnlyMixin, but also hides the model entirely from non-admin
-    staff — used for Bearer, where phone/email/address must not be casually
-    browsable. Staff reach bearer records only through the intake form's
-    phone-gated search, never through this admin."""
-
-    def has_module_permission(self, request):
-        return request.user.is_superuser
-
-    def has_view_permission(self, request, obj=None):
-        return request.user.is_superuser
-
-
 @admin.register(Season)
-class SeasonAdmin(AdminOnlyMixin, admin.ModelAdmin):
+class SeasonAdmin(admin.ModelAdmin):
     list_display = ['name', 'is_current', 'raffle_concluded_at', 'retention_grace_period_days']
     list_editable = ['is_current']
 
 
 @admin.register(Venue)
-class VenueAdmin(AdminOnlyMixin, admin.ModelAdmin):
+class VenueAdmin(admin.ModelAdmin):
     list_display = ['number', 'name', 'category', 'is_active']
     list_editable = ['is_active']
     search_fields = ['number', 'name', 'address']
