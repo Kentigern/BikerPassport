@@ -15,11 +15,23 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import include, path
-from django.views.generic import RedirectView
+from django.shortcuts import redirect
+from django.urls import include, path, reverse
+
+
+def root_redirect(request):
+    """Routes by role rather than a single fixed destination — a
+    superuser's post-login `next` shouldn't get hijacked into the
+    intake-only landing page meant for Passport Logger-type staff."""
+    if not request.user.is_authenticated:
+        return redirect(f"{reverse('admin:login')}?next=/")
+    if request.user.is_superuser:
+        return redirect('admin:index')
+    return redirect('landing')
+
 
 urlpatterns = [
-    path('', RedirectView.as_view(url='/passports/', permanent=False)),
+    path('', root_redirect),
     path('admin/', admin.site.urls),
     path('passports/', include('passports.urls')),
 ]
