@@ -67,7 +67,7 @@ Internal staff tool for Make Your Mark's annual Bike + Brew fundraiser — see
 
 - **Landing page** (`/passports/`) — a single "Log a Submission" button, the entry point for Passport Logger-type staff whose only job is intake. Good URL to bookmark/hand out to volunteers instead of `/admin/`.
 - **Admin** (`/admin/`) — manage seasons, venues, and look up/correct existing bearers and submissions.
-- **New submission** (`/passports/submissions/new/`, also linked from the submissions admin page and the landing page) — the fast passport-intake form: search for an existing bearer by name/phone or enter a new one, check off stamped venues from a searchable list with a live stamp/raffle-ticket count, and save. The same form (`/passports/submissions/<id>/edit/`) is used to correct an existing submission.
+- **New submission** (`/passports/submissions/new/`, also linked from the submissions admin page and the landing page) — the fast passport-intake form: search for an existing bearer by name/phone or enter a new one, check off stamped venues, and save. The same form (`/passports/submissions/<id>/edit/`) is used to correct an existing submission. Two venue-checklist styles, toggleable per staff member (remembered via the browser's local storage): **List view** (searchable, scrolling, default) and **Book view** (a paginated 4-column grid echoing the physical passport's own page layout, 12 venues per page).
 - **Audit history** — open a Bearer or Passport submission in the admin and click **History** (top right of its page) to see every change, who made it, and when — including edits made through the intake form, not just the admin.
 
 ## Project layout

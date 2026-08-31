@@ -28,10 +28,70 @@
     #intake-readout { font-weight: bold; background: #f0f0f0; border-radius: 4px; padding: .4rem .6rem; display: inline-block; }
 
     .venue-toolbar { margin: .5rem 0; }
-    #venue-list { max-height: 420px; overflow-y: auto; border: 1px solid #ddd; padding: .5rem; }
-    .venue-row { display: block; font-size: .9rem; padding: .15rem 0; }
     #stamp-summary { position: sticky; top: 0; background: #fff8dc; border: 1px solid #e0c96e; padding: .5rem .8rem; margin-bottom: .5rem; font-weight: bold; border-radius: 4px; }
     .corner-snip-note { font-size: .85rem; color: #555; }
+
+    .view-toggle { margin: .5rem 0; }
+    .view-toggle-btn { background: #eee; color: #444; border: 1px solid #ccc; }
+    .view-toggle-btn.active { background: #2a6b2a; color: #fff; border-color: #2a6b2a; }
+
+    /* List view (default) */
+    #venue-list { max-height: 420px; overflow-y: auto; border: 1px solid #ddd; padding: .5rem; }
+    .venue-row { display: block; font-size: .9rem; padding: .15rem 0; }
+    .venue-badge { font-weight: bold; margin-right: .3em; }
+    .venue-badge::after { content: "."; }
+    .venue-name { }
+
+    /* Book view — echoes the physical passport's 4-column card layout */
+    #book-pagination { display: none; align-items: center; gap: .75rem; margin: .5rem 0; }
+    #book-page-indicator { font-size: .9rem; color: #555; }
+    #venue-list.book-mode {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: .6rem;
+      max-height: none;
+    }
+    #venue-list.book-mode .venue-row {
+      display: none;
+      position: relative;
+      flex-direction: column;
+      gap: .35rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: .6rem 2rem .6rem .6rem;
+      background: #fff;
+      min-height: 5.5rem;
+    }
+    #venue-list.book-mode .venue-row.book-visible { display: flex; }
+    #venue-list.book-mode .venue-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.7rem;
+      height: 1.7rem;
+      background: #111;
+      color: #fff;
+      border-radius: 4px;
+      font-size: .8rem;
+      margin-right: 0;
+    }
+    #venue-list.book-mode .venue-badge::after { content: ""; }
+    #venue-list.book-mode .venue-name {
+      font-weight: bold;
+      text-transform: uppercase;
+      font-size: .8rem;
+      line-height: 1.15;
+    }
+    #venue-list.book-mode input[type=checkbox] {
+      position: absolute;
+      top: .6rem;
+      right: .6rem;
+      width: 1.1rem;
+      height: 1.1rem;
+    }
+    @media (max-width: 700px) {
+      #venue-list.book-mode { grid-template-columns: repeat(2, 1fr); }
+    }
   </style>
 </head>
 <body>
@@ -94,14 +154,25 @@
     <p class="venue-save-status"></p>
   </div>
 
-  <label for="venue-filter">Filter venues…</label>
+  <div class="view-toggle">
+    <button type="button" id="view-list-btn" class="view-toggle-btn">List view</button>
+    <button type="button" id="view-book-btn" class="view-toggle-btn">Book view</button>
+  </div>
+
+  <label for="venue-filter" id="venue-filter-label">Filter venues…</label>
   <input type="text" id="venue-filter" autocomplete="off" placeholder="Type a name or number">
+
+  <div id="book-pagination">
+    <button type="button" id="book-prev-btn">&larr; Prev</button>
+    <span id="book-page-indicator"></span>
+    <button type="button" id="book-next-btn">Next &rarr;</button>
+  </div>
 
   <div id="venue-list">
     {% for venue in venues %}
       <label class="venue-row" data-search="{{ venue.number }} {{ venue.name|lower }}">
         <input type="checkbox" value="{{ venue.pk }}" {% if venue.pk in checked_ids %}checked{% endif %}>
-        {{ venue.number }}. {{ venue.name }}
+        <span class="venue-badge">{{ venue.number }}</span><span class="venue-name">{{ venue.name }}</span>
       </label>
     {% endfor %}
   </div>

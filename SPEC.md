@@ -54,7 +54,7 @@ Load/confirm the 296 cafes for the season (import from CSV or carry forward from
 
 1. Staff opens "New submission." Season is always the current one — never picked manually.
 2. Enters bearer's personal details from the passport, or searches by name/phone to match an existing bearer, and saves — this can happen before any venues are ticked.
-3. Marks which cafes were stamped — a checklist of all 296, searchable, sortable by number — and saves; can be done in one pass or across several saves as the volunteer works through the passport.
+3. Marks which cafes were stamped — a checklist of all 296, sortable by number, in either of two styles staff can pick between: a searchable scrolling **list**, or a paginated **book view** echoing the physical passport's own 4-column, 12-per-page layout (a straight chunking by cafe number, not a stored replica of the exact original page breaks — see §5.1) — and saves; can be done in one pass or across several saves as the volunteer works through the passport.
 4. System computes stamp count and raffle tickets live as boxes are checked.
 5. Submission is saved with status "entered."
 6. Staff (or a batch action) triggers the confirmation email; status moves to "emailed" (see §5.3–5.6).

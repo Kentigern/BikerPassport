@@ -22,19 +22,79 @@
     }).then(function (r) { return r.json().then(function (data) { return { status: r.status, data: data }; }); });
   }
 
-  // --- Venue filter ---------------------------------------------------
+  // --- Venue filter (list view only) -----------------------------------
+  var venueList = document.getElementById('venue-list');
   var filterInput = document.getElementById('venue-filter');
-  var venueRows = document.querySelectorAll('.venue-row');
+  var filterLabel = document.getElementById('venue-filter-label');
+  var venueRows = Array.prototype.slice.call(document.querySelectorAll('.venue-row'));
 
-  filterInput.addEventListener('keyup', function () {
+  function applyFilter() {
     var q = filterInput.value.trim().toLowerCase();
     venueRows.forEach(function (row) {
       row.style.display = row.dataset.search.indexOf(q) === -1 ? 'none' : '';
     });
+  }
+
+  filterInput.addEventListener('keyup', applyFilter);
+
+  // --- View toggle: List vs Book (Book echoes the physical passport's page layout) ---
+  var listBtn = document.getElementById('view-list-btn');
+  var bookBtn = document.getElementById('view-book-btn');
+  var pagination = document.getElementById('book-pagination');
+  var prevBtn = document.getElementById('book-prev-btn');
+  var nextBtn = document.getElementById('book-next-btn');
+  var pageIndicator = document.getElementById('book-page-indicator');
+
+  var VENUES_PER_PAGE = 12;
+  var totalPages = Math.max(1, Math.ceil(venueRows.length / VENUES_PER_PAGE));
+  var currentPage = 0;
+
+  function renderBookPage() {
+    var start = currentPage * VENUES_PER_PAGE;
+    var end = start + VENUES_PER_PAGE;
+    venueRows.forEach(function (row, i) {
+      row.classList.toggle('book-visible', i >= start && i < end);
+    });
+    pageIndicator.textContent = 'Page ' + (currentPage + 1) + ' of ' + totalPages;
+    prevBtn.disabled = currentPage === 0;
+    nextBtn.disabled = currentPage === totalPages - 1;
+  }
+
+  prevBtn.addEventListener('click', function () {
+    if (currentPage > 0) { currentPage--; renderBookPage(); }
+  });
+  nextBtn.addEventListener('click', function () {
+    if (currentPage < totalPages - 1) { currentPage++; renderBookPage(); }
   });
 
+  function setView(view) {
+    var isBook = view === 'book';
+    venueList.classList.toggle('book-mode', isBook);
+    pagination.style.display = isBook ? 'flex' : 'none';
+    filterInput.style.display = isBook ? 'none' : '';
+    filterLabel.style.display = isBook ? 'none' : '';
+    listBtn.classList.toggle('active', !isBook);
+    bookBtn.classList.toggle('active', isBook);
+    if (isBook) {
+      // Clear any inline display:none left by the list-view filter — it
+      // has higher CSS specificity than the book-mode class rules below
+      // and would otherwise keep filtered-out rows hidden on every page.
+      venueRows.forEach(function (row) { row.style.display = ''; });
+      renderBookPage();
+    } else {
+      applyFilter();
+    }
+    try { localStorage.setItem('bikenbrew_venue_view', view); } catch (e) { /* ignore */ }
+  }
+
+  listBtn.addEventListener('click', function () { setView('list'); });
+  bookBtn.addEventListener('click', function () { setView('book'); });
+
+  var savedView = 'list';
+  try { savedView = localStorage.getItem('bikenbrew_venue_view') || 'list'; } catch (e) { /* ignore */ }
+  setView(savedView);
+
   // --- Live stamp count / raffle tickets ------------------------------
-  var venueList = document.getElementById('venue-list');
   var stampCountEl = document.getElementById('stamp-count');
   var raffleTicketsEl = document.getElementById('raffle-tickets');
   var MAX_RAFFLE_TICKETS = 28;
