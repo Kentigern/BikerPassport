@@ -2,6 +2,7 @@ import uuid
 
 from django.conf import settings
 from django.db import models
+from simple_history.models import HistoricalRecords
 
 
 class ConsentStatus(models.TextChoices):
@@ -117,6 +118,8 @@ class Bearer(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    history = HistoricalRecords()
+
     def __str__(self):
         return f"{self.name} <{self.email}>"
 
@@ -164,6 +167,8 @@ class PassportSubmission(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    history = HistoricalRecords(m2m_fields=['venues_stamped'])
 
     class Meta:
         constraints = [

@@ -1,4 +1,5 @@
 from django.contrib import admin
+from simple_history.admin import SimpleHistoryAdmin
 
 from .models import Bearer, PassportSubmission, Season, Venue
 
@@ -33,7 +34,7 @@ class VenueAdmin(AdminOnlyMixin, admin.ModelAdmin):
 
 
 @admin.register(Bearer)
-class BearerAdmin(admin.ModelAdmin):
+class BearerAdmin(SimpleHistoryAdmin):
     list_display = [
         'name',
         'email',
@@ -48,7 +49,7 @@ class BearerAdmin(admin.ModelAdmin):
 
 
 @admin.register(PassportSubmission)
-class PassportSubmissionAdmin(admin.ModelAdmin):
+class PassportSubmissionAdmin(SimpleHistoryAdmin):
     list_display = [
         'intake_number',
         'season',
