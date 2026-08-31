@@ -18,6 +18,11 @@ def _permission_denied_json(message):
 
 
 @staff_member_required
+def landing_view(request):
+    return render(request, 'passports/landing.html')
+
+
+@staff_member_required
 def submission_form_view(request, pk=None):
     submission = get_object_or_404(PassportSubmission, pk=pk) if pk else None
 
