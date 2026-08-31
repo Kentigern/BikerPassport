@@ -1,16 +1,20 @@
+import csv
+import random
+
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
 from django.db.models import Count, Max, Q
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.utils.dateparse import parse_date
+from django.views.decorators.http import require_POST
 
 from .access import is_bearer_verified, mark_bearer_verified
 from .forms import BearerForm
-from .models import Bearer, PassportSubmission, Season, Venue
+from .models import Bearer, PassportSubmission, RaffleExport, Season, Venue
 from .phone import normalize_uk_phone
 
 
@@ -34,11 +38,13 @@ def _ranked(queryset, count_attr):
     ]
 
 
+def _is_site_admin(user):
+    return user.is_superuser or user.groups.filter(name='Site Admin').exists()
+
+
 @staff_member_required
 def dashboard_view(request):
-    if not (
-        request.user.is_superuser or request.user.groups.filter(name='Site Admin').exists()
-    ):
+    if not _is_site_admin(request.user):
         raise PermissionDenied
 
     season = Season.objects.current()
@@ -91,6 +97,50 @@ def dashboard_view(request):
         }
     )
     return render(request, 'passports/dashboard.html', context)
+
+
+@staff_member_required
+@require_POST
+def raffle_export_view(request):
+    """CSV raffle draw list — one row per *ticket*, not per bearer (a
+    bearer with 3 tickets gets 3 rows), shuffled, numbered. Mirrors the
+    legacy MARK_Entries.py tool's output shape, adapted to our actual
+    Bearer fields (a single mailing_address, not separate address lines).
+
+    Real prizes are on the line, so this is POST-only (a plain GET link
+    would let anyone re-roll the shuffle just by refreshing/re-clicking)
+    and every export is logged to RaffleExport — an immutable record of
+    who generated it, when, and how many tickets it contained."""
+    if not _is_site_admin(request.user):
+        raise PermissionDenied
+
+    season = Season.objects.current()
+    filename = f"raffle_entries_{season or 'no_season'}.csv"
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    writer = csv.writer(response)
+    writer.writerow(['Entry ID', 'Name', 'Email', 'Phone', 'Mailing Address'])
+
+    if season is not None:
+        submissions = (
+            PassportSubmission.objects.filter(season=season)
+            .select_related('bearer')
+            .annotate(stamp_total=Count('venues_stamped'))
+        )
+        entries = []
+        for submission in submissions:
+            tickets = min(submission.stamp_total // 10, PassportSubmission.MAX_RAFFLE_TICKETS)
+            entries.extend([submission.bearer] * tickets)
+        random.shuffle(entries)
+        for entry_id, bearer in enumerate(entries, start=1):
+            writer.writerow([entry_id, bearer.name, bearer.email, bearer.phone, bearer.mailing_address])
+
+        RaffleExport.objects.create(
+            season=season, generated_by=request.user, entry_count=len(entries)
+        )
+
+    return response
 
 
 @staff_member_required

@@ -219,3 +219,27 @@ class PassportSubmission(models.Model):
     @property
     def raffle_tickets(self):
         return min(self.stamp_count // 10, self.MAX_RAFFLE_TICKETS)
+
+
+class RaffleExport(models.Model):
+    """Audit record of a raffle-ticket draw list export. Real prizes are on
+    the line, so every export is logged here — who, when, how many tickets
+    — and this record is immutable (no add/change/delete via the raw admin,
+    §passports.admin) so it can't be edited after the fact to paper over a
+    dispute about the draw."""
+
+    season = models.ForeignKey(Season, on_delete=models.PROTECT, related_name='raffle_exports')
+    generated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='raffle_exports',
+    )
+    generated_at = models.DateTimeField(auto_now_add=True)
+    entry_count = models.PositiveIntegerField(help_text="Total ticket rows in this export.")
+
+    class Meta:
+        ordering = ['-generated_at']
+
+    def __str__(self):
+        return f"{self.season} — {self.entry_count} entries by {self.generated_by} at {self.generated_at:%Y-%m-%d %H:%M}"

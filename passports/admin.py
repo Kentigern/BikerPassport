@@ -3,7 +3,7 @@ from django.shortcuts import redirect
 from simple_history.admin import SimpleHistoryAdmin
 
 from .access import is_bearer_verified, mark_bearer_verified
-from .models import Bearer, PassportSubmission, Season, Venue
+from .models import Bearer, PassportSubmission, RaffleExport, Season, Venue
 from .phone import normalize_uk_phone
 
 admin.site.site_header = "MARK Passport Administration"
@@ -151,4 +151,24 @@ class PassportSubmissionAdmin(SimpleHistoryAdmin):
     filter_horizontal = ['venues_stamped']
 
     def has_add_permission(self, request):
+        return False
+
+
+@admin.register(RaffleExport)
+class RaffleExportAdmin(admin.ModelAdmin):
+    """Read-only, full stop — an audit trail of raffle-ticket exports that
+    can't be edited or deleted (not even by a superuser) is the whole point:
+    it's only worth anything as evidence if it can't be tampered with after
+    the fact."""
+
+    list_display = ['season', 'generated_by', 'generated_at', 'entry_count']
+    list_filter = ['season']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
         return False
