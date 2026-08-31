@@ -70,6 +70,14 @@ class BearerAdmin(SimpleHistoryAdmin):
 
 @admin.register(PassportSubmission)
 class PassportSubmissionAdmin(SimpleHistoryAdmin):
+    """intake_number/status/entered_by/email_sent_at/email_send_failed are
+    system-managed by the intake form's own logic (atomic numbering, status
+    transitions, audit attribution) — read-only here for everyone, including
+    superusers, so that granting add/change_passportsubmission (needed for
+    staff to use the intake form at all, since it checks the same
+    permissions) can't be used to hand-edit them via the raw admin form."""
+
+    readonly_fields = ['intake_number', 'status', 'entered_by', 'email_sent_at', 'email_send_failed']
     list_display = [
         'intake_number',
         'season',
