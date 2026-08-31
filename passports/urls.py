@@ -6,6 +6,7 @@ urlpatterns = [
     path('', views.landing_view, name='landing'),
     path('dashboard/', views.dashboard_view, name='dashboard'),
     path('raffle/export/', views.raffle_export_view, name='raffle_export'),
+    path('raffle/audit-log/', views.raffle_audit_log_view, name='raffle_audit_log'),
     path('submissions/new/', views.submission_form_view, name='submission_new'),
     path('submissions/<int:pk>/edit/', views.submission_form_view, name='submission_edit'),
     path('submissions/save/', views.submission_save_view, name='submission_save'),

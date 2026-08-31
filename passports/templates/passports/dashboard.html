@@ -167,7 +167,7 @@
       <button type="submit" class="nav-button secondary">Produce Raffle Tickets</button>
     </form>
   {% endif %}
-  <a class="nav-button secondary" href="{% url 'admin:passports_raffleexport_changelist' %}">View Audit Log</a>
+  <a class="nav-button secondary" href="{% url 'raffle_audit_log' %}">View Audit Log</a>
   <form method="post" action="{% url 'admin:logout' %}">
     {% csrf_token %}
     <button type="submit" class="nav-button secondary">Logout</button>

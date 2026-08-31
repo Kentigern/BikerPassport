@@ -144,6 +144,21 @@ def raffle_export_view(request):
 
 
 @staff_member_required
+def raffle_audit_log_view(request):
+    if not _is_site_admin(request.user):
+        raise PermissionDenied
+
+    q = request.GET.get('q', '').strip()
+    entries = RaffleExport.objects.select_related('season', 'generated_by').order_by('-generated_at')
+    if q:
+        entries = entries.filter(
+            Q(generated_by__username__icontains=q) | Q(season__name__icontains=q)
+        )
+
+    return render(request, 'passports/raffle_audit_log.html', {'entries': entries, 'q': q})
+
+
+@staff_member_required
 def submission_form_view(request, pk=None):
     submission = get_object_or_404(PassportSubmission, pk=pk) if pk else None
 
