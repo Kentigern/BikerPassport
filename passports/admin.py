@@ -75,9 +75,19 @@ class PassportSubmissionAdmin(SimpleHistoryAdmin):
     transitions, audit attribution) — read-only here for everyone, including
     superusers, so that granting add/change_passportsubmission (needed for
     staff to use the intake form at all, since it checks the same
-    permissions) can't be used to hand-edit them via the raw admin form."""
+    permissions) can't be used to hand-edit them via the raw admin form.
+    `bearer` is read-only too — reassigning a submission to a different
+    bearer via a free autocomplete search would bypass the phone-gate
+    entirely (§5.2), so that's not an action the raw admin offers at all."""
 
-    readonly_fields = ['intake_number', 'status', 'entered_by', 'email_sent_at', 'email_send_failed']
+    readonly_fields = [
+        'bearer',
+        'intake_number',
+        'status',
+        'entered_by',
+        'email_sent_at',
+        'email_send_failed',
+    ]
     list_display = [
         'intake_number',
         'season',
@@ -91,5 +101,4 @@ class PassportSubmissionAdmin(SimpleHistoryAdmin):
     ]
     list_filter = ['season', 'status', 'email_send_failed']
     search_fields = ['bearer__name', 'bearer__email', 'intake_number']
-    autocomplete_fields = ['bearer']
     filter_horizontal = ['venues_stamped']
