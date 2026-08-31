@@ -49,11 +49,23 @@
   var totalPages = Math.max(1, Math.ceil(venueRows.length / VENUES_PER_PAGE));
   var currentPage = 0;
 
+  // Places a page's 12 venues the way the physical book does: venues 1-6
+  // down the left page (col 1 = 1,3,5 / col 2 = 2,4,6), venues 7-12 down
+  // the right page (col 3 = 7,9,11 / col 4 = 8,10,12) — not a plain
+  // left-to-right fill across all 4 columns.
   function renderBookPage() {
     var start = currentPage * VENUES_PER_PAGE;
     var end = start + VENUES_PER_PAGE;
     venueRows.forEach(function (row, i) {
-      row.classList.toggle('book-visible', i >= start && i < end);
+      var visible = i >= start && i < end;
+      row.classList.toggle('book-visible', visible);
+      if (visible) {
+        var posInPage = i - start;              // 0-11
+        var half = posInPage < 6 ? 0 : 1;        // 0 = left page, 1 = right page
+        var withinHalf = posInPage % 6;          // 0-5
+        row.style.gridColumn = half * 2 + (withinHalf % 2) + 1;  // 1,2 or 3,4
+        row.style.gridRow = Math.floor(withinHalf / 2) + 1;      // 1-3
+      }
     });
     pageIndicator.textContent = 'Page ' + (currentPage + 1) + ' of ' + totalPages;
     prevBtn.disabled = currentPage === 0;
