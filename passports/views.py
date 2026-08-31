@@ -179,7 +179,8 @@ def submission_save_view(request):
 def bearer_search_view(request):
     """Phone is the access-control key for a bearer's details (per the
     charity's ask): searching by phone reveals full details, searching by
-    name only confirms a match exists and prompts for the phone number."""
+    name only confirms a match exists and prompts for the phone number.
+    Superusers bypass this and get full details either way (§5.2)."""
     if not request.user.has_perm('passports.view_bearer'):
         return _permission_denied_json('You do not have permission to view bearers.')
 
@@ -191,6 +192,12 @@ def bearer_search_view(request):
 
         if normalized_phone:
             bearers = Bearer.objects.filter(phone=normalized_phone)
+        elif request.user.is_superuser:
+            bearers = Bearer.objects.filter(name__icontains=q)[:10]
+        else:
+            bearers = None
+
+        if bearers is not None:
             for b in bearers:
                 mark_bearer_verified(request, b.pk)
                 existing = (

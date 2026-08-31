@@ -28,10 +28,12 @@ class VenueAdmin(admin.ModelAdmin):
 class BearerAdmin(SimpleHistoryAdmin):
     """Group permissions govern whether a role can touch Bearer data at
     all; the phone number is still required to reveal or act on any one
-    specific bearer (§5.2). The changelist never browses freely — it only
-    ever shows an exact phone match — and view/change on an individual
-    bearer additionally requires this session to have proven it knows
-    that bearer's phone (via a matching admin or intake-form search)."""
+    specific bearer (§5.2), except for superusers — the most trusted tier
+    in this app — who browse and search freely. For everyone else the
+    changelist never browses freely: it only ever shows an exact phone
+    match, and view/change on an individual bearer additionally requires
+    this session to have proven it knows that bearer's phone (via a
+    matching admin or intake-form search)."""
 
     list_display = [
         'name',
@@ -41,16 +43,22 @@ class BearerAdmin(SimpleHistoryAdmin):
         'marketing_consent_status',
         'retention_expiry_date',
     ]
-    search_fields = ['phone']
+    search_fields = ['phone', 'name', 'email']
     search_help_text = (
         "Enter a bearer's exact phone number to find them — this list never "
         "browses freely, and searching by name isn't supported here (privacy "
-        "control, §5.2). Use the intake form's search for name lookups."
+        "control, §5.2). Use the intake form's search for name lookups. "
+        "(Superusers can search/browse freely.)"
     )
     list_filter = ['next_season_consent_status', 'marketing_consent_status']
     readonly_fields = ['consent_token']
 
     def get_search_results(self, request, queryset, search_term):
+        if request.user.is_superuser:
+            if not search_term:
+                return queryset, False
+            return super().get_search_results(request, queryset, search_term)
+
         # Note: get_queryset() stays the normal, unrestricted queryset — it's
         # what get_object() uses to look up a single bearer for the change
         # page, and that lookup must succeed so has_view/change_permission's
