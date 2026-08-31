@@ -26,14 +26,16 @@ class VenueAdmin(admin.ModelAdmin):
 
 @admin.register(Bearer)
 class BearerAdmin(SimpleHistoryAdmin):
-    """Group permissions govern whether a role can touch Bearer data at
-    all; the phone number is still required to reveal or act on any one
-    specific bearer (§5.2), except for superusers — the most trusted tier
-    in this app — who browse and search freely. For everyone else the
-    changelist never browses freely: it only ever shows an exact phone
-    match, and view/change on an individual bearer additionally requires
-    this session to have proven it knows that bearer's phone (via a
-    matching admin or intake-form search)."""
+    """The phone-gate (§5.2) restricts *changing* a bearer, not viewing
+    one — group permissions (view_bearer) already control whether a role
+    can browse the list/detail pages at all. Phone itself never appears
+    in the list, and is hidden on an unverified bearer's detail page too,
+    since showing it would let anyone read the "secret" straight off the
+    screen and defeat the point of requiring it. Verifying (an exact
+    phone search here or via the intake form) reveals the field and
+    unlocks editing for that one bearer. Superusers bypass all of this —
+    full list, full search, phone always visible — as the most trusted
+    tier and the one actually administering the app."""
 
     list_display = [
         'name',
@@ -45,39 +47,35 @@ class BearerAdmin(SimpleHistoryAdmin):
     ]
     search_fields = ['phone', 'name', 'email']
     search_help_text = (
-        "Enter a bearer's exact phone number to find them — this list never "
-        "browses freely, and searching by name isn't supported here (privacy "
-        "control, §5.2). Use the intake form's search for name lookups. "
-        "(Superusers can search/browse freely.)"
+        "Search by name or phone. Only an exact phone match reveals that "
+        "bearer's phone number and unlocks editing them (privacy control, "
+        "§5.2) — everything else here is freely browsable."
     )
     list_filter = ['next_season_consent_status', 'marketing_consent_status']
     readonly_fields = ['consent_token']
 
-    def get_search_results(self, request, queryset, search_term):
+    def get_list_display(self, request):
         if request.user.is_superuser:
-            if not search_term:
-                return queryset, False
-            return super().get_search_results(request, queryset, search_term)
+            return self.list_display
+        return [f for f in self.list_display if f != 'phone']
 
-        # Note: get_queryset() stays the normal, unrestricted queryset — it's
-        # what get_object() uses to look up a single bearer for the change
-        # page, and that lookup must succeed so has_view/change_permission's
-        # object-level check (below) is what actually gates access, not a
-        # missing-object 404/redirect. Only the changelist/search itself is
-        # restricted here, to a phone-exact match — no search term (or a
-        # name) yields nothing.
-        normalized = normalize_uk_phone(search_term)
-        if not normalized:
-            return queryset.none(), False
-        matches = queryset.filter(phone=normalized)
-        for b in matches:
-            mark_bearer_verified(request, b.pk)
-        return matches, False
+    def get_fields(self, request, obj=None):
+        fields = super().get_fields(request, obj)
+        if not request.user.is_superuser and obj is not None and not is_bearer_verified(request, obj.pk):
+            fields = [f for f in fields if f != 'phone']
+        return fields
 
-    def has_view_permission(self, request, obj=None):
-        if not super().has_view_permission(request, obj):
-            return False
-        return is_bearer_verified(request, obj.pk) if obj else True
+    def get_search_results(self, request, queryset, search_term):
+        if not request.user.is_superuser:
+            normalized = normalize_uk_phone(search_term)
+            if normalized:
+                matches = queryset.filter(phone=normalized)
+                for b in matches:
+                    mark_bearer_verified(request, b.pk)
+                return matches, False
+        # Everything else — an empty term (browse), a name, or any
+        # superuser search — falls through to Django's normal behaviour.
+        return super().get_search_results(request, queryset, search_term)
 
     def has_change_permission(self, request, obj=None):
         if not super().has_change_permission(request, obj):
