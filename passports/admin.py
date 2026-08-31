@@ -93,7 +93,11 @@ class PassportSubmissionAdmin(SimpleHistoryAdmin):
     permissions) can't be used to hand-edit them via the raw admin form.
     `bearer` is read-only too — reassigning a submission to a different
     bearer via a free autocomplete search would bypass the phone-gate
-    entirely (§5.2), so that's not an action the raw admin offers at all."""
+    entirely (§5.2), so that's not an action the raw admin offers at all.
+    Creating a submission here is blocked outright (has_add_permission) —
+    `bearer` being required and readonly makes the raw "Add" form
+    fundamentally broken (no way to set a bearer at all); the intake
+    form's own "New submission" is the only correct way in."""
 
     readonly_fields = [
         'bearer',
@@ -117,3 +121,6 @@ class PassportSubmissionAdmin(SimpleHistoryAdmin):
     list_filter = ['season', 'status', 'email_send_failed']
     search_fields = ['bearer__name', 'bearer__email', 'intake_number']
     filter_horizontal = ['venues_stamped']
+
+    def has_add_permission(self, request):
+        return False
