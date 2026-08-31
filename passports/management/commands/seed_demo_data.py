@@ -7,7 +7,7 @@ from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
 
-from passports.models import Bearer, PassportSubmission, Season, Venue
+from passports.models import Bearer, PassportSubmission, RaffleExport, Season, Venue
 
 # Phone numbers use the 07700 100xxx block, a distinctly patterned range
 # unlikely to be real. (Ofcom's actual "reserved for fiction" range,
@@ -59,9 +59,11 @@ EMAIL_FAILED_PHONE_SUFFIX = "008"
 class Command(BaseCommand):
     help = (
         "Seed (or refresh) realistic demo data: ~18 fictional bearers with "
-        "varying stamp counts, for the current season. Idempotent - safe to "
-        "re-run, matches existing demo bearers by their distinctly-patterned "
-        "phone number rather than creating duplicates."
+        "varying stamp counts, plus a couple of raffle-export audit events, "
+        "for the current season. Idempotent - safe to re-run, matches "
+        "existing demo bearers by their distinctly-patterned phone number "
+        "rather than creating duplicates, and replaces (rather than piles "
+        "up) the demo audit events each run."
     )
 
     def add_arguments(self, parser):
@@ -79,7 +81,16 @@ class Command(BaseCommand):
             count = bearers.count()
             PassportSubmission.objects.filter(bearer__in=bearers).delete()
             bearers.delete()
-            self.stdout.write(self.style.SUCCESS(f"Removed {count} demo bearers (and their submissions)."))
+            season = Season.objects.current()
+            audit_count = 0
+            if season is not None:
+                audit_count, _ = RaffleExport.objects.filter(season=season).delete()
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Removed {count} demo bearers (and their submissions) "
+                    f"and {audit_count} demo raffle audit event(s)."
+                )
+            )
             return
 
         season = Season.objects.current()
@@ -135,9 +146,27 @@ class Command(BaseCommand):
                 submission.save()
                 submission.venues_stamped.set(venues)
 
+        # Demo raffle-export audit events, so the audit log page has
+        # realistic history to show. Replaced (not appended to) each run,
+        # matching this command's overall idempotent-refresh behaviour.
+        RaffleExport.objects.filter(season=season).delete()
+        total_tickets = sum(
+            s.raffle_tickets
+            for s in PassportSubmission.objects.filter(season=season, bearer__phone__in=phones)
+        )
+        if total_tickets and entered_by:
+            earlier = RaffleExport.objects.create(
+                season=season, generated_by=entered_by, entry_count=max(total_tickets - 12, 0)
+            )
+            RaffleExport.objects.filter(pk=earlier.pk).update(
+                generated_at=timezone.now() - timedelta(days=1, hours=3)
+            )
+            RaffleExport.objects.create(season=season, generated_by=entered_by, entry_count=total_tickets)
+
         self.stdout.write(
             self.style.SUCCESS(
                 f"Seeded {len(DEMO_BEARERS)} demo bearers for season {season}: "
-                f"{created} new submissions, {updated} refreshed."
+                f"{created} new submissions, {updated} refreshed, "
+                f"2 demo raffle audit events."
             )
         )
