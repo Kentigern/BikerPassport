@@ -145,8 +145,10 @@ class PassportSubmission(models.Model):
     bearer = models.ForeignKey(Bearer, on_delete=models.PROTECT, related_name='submissions')
 
     intake_number = models.PositiveIntegerField(
-        help_text="Sequential number assigned when the physical passport is logged "
-        "in, before data entry — prevents duplicate/missed processing (§5.2).",
+        help_text="Sequential number auto-assigned per season, the first time this "
+        "submission's venues are saved. Combined with the one-submission-per-"
+        "bearer-per-season rule below, this is effectively 'the Nth bearer "
+        "processed this season' (§5.2).",
     )
     date_received = models.DateField()
     venues_stamped = models.ManyToManyField(Venue, blank=True, related_name='submissions')
@@ -181,7 +183,10 @@ class PassportSubmission(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=['season', 'intake_number'], name='unique_intake_number_per_season'
-            )
+            ),
+            models.UniqueConstraint(
+                fields=['bearer', 'season'], name='unique_bearer_per_season'
+            ),
         ]
         ordering = ['season', 'intake_number']
 

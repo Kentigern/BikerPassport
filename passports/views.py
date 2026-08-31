@@ -1,5 +1,5 @@
 from django.contrib.admin.views.decorators import staff_member_required
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Max, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
@@ -66,37 +66,58 @@ def submission_save_view(request):
     date_received = parse_date(request.POST.get('date_received', '')) or timezone.localdate()
     notes = request.POST.get('notes', '')
 
-    if submission_id:
-        submission = get_object_or_404(PassportSubmission, pk=submission_id)
-        submission.bearer = bearer
-        submission.date_received = date_received
-        submission.notes = notes
-        submission.save()
-        submission.venues_stamped.set(venues)
-    else:
-        season = Season.objects.current()
-        if season is None:
-            return JsonResponse(
-                {'ok': False, 'errors': {'season': ['No season exists yet — ask an admin to create one.']}},
-                status=400,
-            )
-        with transaction.atomic():
-            season = Season.objects.select_for_update().get(pk=season.pk)
-            next_number = (
-                PassportSubmission.objects.filter(season=season)
-                .aggregate(Max('intake_number'))['intake_number__max']
-                or 0
-            ) + 1
-            submission = PassportSubmission.objects.create(
-                season=season,
-                bearer=bearer,
-                intake_number=next_number,
-                date_received=date_received,
-                notes=notes,
-                status=PassportSubmission.Status.ENTERED,
-                entered_by=request.user,
-            )
+    matched_existing = False
+
+    try:
+        if submission_id:
+            submission = get_object_or_404(PassportSubmission, pk=submission_id)
+            submission.bearer = bearer
+            submission.date_received = date_received
+            submission.notes = notes
+            submission.save()
             submission.venues_stamped.set(venues)
+        else:
+            season = Season.objects.current()
+            if season is None:
+                return JsonResponse(
+                    {'ok': False, 'errors': {'season': ['No season exists yet — ask an admin to create one.']}},
+                    status=400,
+                )
+            # One submission per bearer per season (enforced by a DB constraint
+            # too): a bearer's passport accumulates stamps through the season,
+            # so a second "new" save for them updates their existing record
+            # rather than creating a duplicate.
+            existing = PassportSubmission.objects.filter(bearer=bearer, season=season).first()
+            if existing:
+                matched_existing = True
+                existing.date_received = date_received
+                existing.notes = notes
+                existing.save()
+                existing.venues_stamped.set(venues)
+                submission = existing
+            else:
+                with transaction.atomic():
+                    season = Season.objects.select_for_update().get(pk=season.pk)
+                    next_number = (
+                        PassportSubmission.objects.filter(season=season)
+                        .aggregate(Max('intake_number'))['intake_number__max']
+                        or 0
+                    ) + 1
+                    submission = PassportSubmission.objects.create(
+                        season=season,
+                        bearer=bearer,
+                        intake_number=next_number,
+                        date_received=date_received,
+                        notes=notes,
+                        status=PassportSubmission.Status.ENTERED,
+                        entered_by=request.user,
+                    )
+                    submission.venues_stamped.set(venues)
+    except IntegrityError:
+        return JsonResponse(
+            {'ok': False, 'errors': {'bearer_id': ['This bearer already has a different submission this season.']}},
+            status=400,
+        )
 
     return JsonResponse(
         {
@@ -106,6 +127,7 @@ def submission_save_view(request):
             'season': str(submission.season),
             'stamp_count': submission.stamp_count,
             'raffle_tickets': submission.raffle_tickets,
+            'matched_existing': matched_existing,
         }
     )
 
@@ -115,17 +137,24 @@ def bearer_search_view(request):
     q = request.GET.get('q', '').strip()
     results = []
     if q:
+        season = Season.objects.current()
         bearers = Bearer.objects.filter(
             Q(name__icontains=q) | Q(phone__icontains=q) | Q(email__icontains=q)
         )[:10]
-        results = [
-            {
-                'id': b.pk,
-                'name': b.name,
-                'email': b.email,
-                'phone': b.phone,
-                'mailing_address': b.mailing_address,
-            }
-            for b in bearers
-        ]
+        for b in bearers:
+            existing = (
+                PassportSubmission.objects.filter(bearer=b, season=season).first()
+                if season
+                else None
+            )
+            results.append(
+                {
+                    'id': b.pk,
+                    'name': b.name,
+                    'email': b.email,
+                    'phone': b.phone,
+                    'mailing_address': b.mailing_address,
+                    'submission_id': existing.pk if existing else None,
+                }
+            )
     return JsonResponse({'results': results})

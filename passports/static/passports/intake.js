@@ -85,7 +85,11 @@
     results.forEach(function (bearer) {
       var row = document.createElement('div');
       var detail = [bearer.phone, bearer.email].filter(Boolean).join(' · ');
-      row.textContent = bearer.name + (detail ? ' (' + detail + ')' : '');
+      var text = bearer.name + (detail ? ' (' + detail + ')' : '');
+      if (bearer.submission_id) {
+        text += ' — already has a submission this season';
+      }
+      row.textContent = text;
       row.addEventListener('click', function () { pickBearer(bearer); });
       resultsBox.appendChild(row);
     });
@@ -93,6 +97,10 @@
   }
 
   function pickBearer(bearer) {
+    if (bearer.submission_id) {
+      window.location = '/passports/submissions/' + bearer.submission_id + '/edit/';
+      return;
+    }
     bearerFields.name.value = bearer.name;
     bearerFields.email.value = bearer.email;
     bearerFields.phone.value = bearer.phone;
@@ -160,9 +168,13 @@
       if (result.data.ok) {
         submissionIdField.value = result.data.submission_id;
         intakeReadout.textContent = 'Intake #' + result.data.intake_number + ' (' + result.data.season + ')';
+        var msg = 'Saved — ' + result.data.stamp_count + ' stamps, ' + result.data.raffle_tickets + ' raffle tickets.';
+        if (result.data.matched_existing) {
+          msg = 'This bearer already had a submission this season — updated it instead of creating a new one. ' + msg;
+        }
         venueSaveStatuses.forEach(function (el) {
           el.className = 'venue-save-status status-ok';
-          el.textContent = 'Saved — ' + result.data.stamp_count + ' stamps, ' + result.data.raffle_tickets + ' raffle tickets.';
+          el.textContent = msg;
         });
         if (exit) {
           window.location = '/passports/submissions/new/';
