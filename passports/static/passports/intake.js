@@ -1,6 +1,27 @@
 (function () {
   'use strict';
 
+  var csrfToken = document.getElementById('csrf_token').value;
+  var bearerIdField = document.getElementById('bearer_id');
+  var submissionIdField = document.getElementById('submission_id');
+
+  function postForm(url, data) {
+    var body = new URLSearchParams();
+    Object.keys(data).forEach(function (key) {
+      var value = data[key];
+      if (Array.isArray(value)) {
+        value.forEach(function (v) { body.append(key, v); });
+      } else {
+        body.append(key, value);
+      }
+    });
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    }).then(function (r) { return r.json().then(function (data) { return { status: r.status, data: data }; }); });
+  }
+
   // --- Venue filter ---------------------------------------------------
   var filterInput = document.getElementById('venue-filter');
   var venueRows = document.querySelectorAll('.venue-row');
@@ -30,7 +51,6 @@
   // --- Bearer search-and-match -----------------------------------------
   var searchInput = document.getElementById('bearer-search');
   var resultsBox = document.getElementById('bearer-search-results');
-  var bearerIdField = document.getElementById('bearer_id');
   var matchNote = document.getElementById('bearer-match-note');
   var bearerFields = {
     name: document.getElementById('id_name'),
@@ -92,5 +112,71 @@
         matchNote.style.display = 'block';
       }
     });
+  });
+
+  // --- Save bearer --------------------------------------------------
+  var bearerSaveBtn = document.getElementById('bearer-save-btn');
+  var bearerSaveStatus = document.getElementById('bearer-save-status');
+  var venueSaveButtons = document.querySelectorAll('.venue-save-btn');
+  var venueSaveStatuses = document.querySelectorAll('.venue-save-status');
+
+  bearerSaveBtn.addEventListener('click', function () {
+    postForm('/passports/bearers/save/', {
+      bearer_id: bearerIdField.value,
+      name: bearerFields.name.value,
+      email: bearerFields.email.value,
+      phone: bearerFields.phone.value,
+      mailing_address: bearerFields.mailing_address.value,
+    }).then(function (result) {
+      if (result.data.ok) {
+        bearerIdField.value = result.data.bearer.id;
+        bearerSaveStatus.className = 'status-ok';
+        bearerSaveStatus.textContent = 'Bearer saved.';
+        venueSaveButtons.forEach(function (btn) { btn.disabled = false; });
+      } else {
+        bearerSaveStatus.className = 'status-error';
+        bearerSaveStatus.textContent = 'Could not save bearer — check the fields above.';
+      }
+    });
+  });
+
+  // --- Save venues (+ notes / date received) -------------------------
+  var intakeReadout = document.getElementById('intake-readout');
+  var dateReceivedField = document.getElementById('id_date_received');
+  var notesField = document.getElementById('id_notes');
+
+  function saveVenues(exit) {
+    var checkedIds = Array.prototype.map.call(
+      venueList.querySelectorAll('input[type=checkbox]:checked'),
+      function (cb) { return cb.value; }
+    );
+    postForm('/passports/submissions/save/', {
+      bearer_id: bearerIdField.value,
+      submission_id: submissionIdField.value,
+      venues_stamped: checkedIds,
+      date_received: dateReceivedField.value,
+      notes: notesField.value,
+    }).then(function (result) {
+      if (result.data.ok) {
+        submissionIdField.value = result.data.submission_id;
+        intakeReadout.textContent = 'Intake #' + result.data.intake_number + ' (' + result.data.season + ')';
+        venueSaveStatuses.forEach(function (el) {
+          el.className = 'venue-save-status status-ok';
+          el.textContent = 'Saved — ' + result.data.stamp_count + ' stamps, ' + result.data.raffle_tickets + ' raffle tickets.';
+        });
+        if (exit) {
+          window.location = '/passports/submissions/new/';
+        }
+      } else {
+        venueSaveStatuses.forEach(function (el) {
+          el.className = 'venue-save-status status-error';
+          el.textContent = 'Could not save — please try again.';
+        });
+      }
+    });
+  }
+
+  venueSaveButtons.forEach(function (btn) {
+    btn.addEventListener('click', function () { saveVenues(btn.dataset.exit === 'true'); });
   });
 })();

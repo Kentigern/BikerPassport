@@ -1,64 +1,112 @@
-from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
-from django.db.models import Q
+from django.db import transaction
+from django.db.models import Max, Q
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404, render
+from django.utils import timezone
+from django.utils.dateparse import parse_date
 
-from .forms import BearerForm, PassportSubmissionForm
-from .models import Bearer, PassportSubmission, Season
+from .forms import BearerForm
+from .models import Bearer, PassportSubmission, Season, Venue
 
 
 @staff_member_required
 def submission_form_view(request, pk=None):
     submission = get_object_or_404(PassportSubmission, pk=pk) if pk else None
-
-    if request.method == 'POST':
-        bearer_id = request.POST.get('bearer_id') or None
-        if bearer_id:
-            bearer_instance = get_object_or_404(Bearer, pk=bearer_id)
-        elif submission:
-            bearer_instance = submission.bearer
-        else:
-            bearer_instance = None
-
-        bearer_form = BearerForm(request.POST, instance=bearer_instance)
-        submission_form = PassportSubmissionForm(request.POST, instance=submission)
-
-        if bearer_form.is_valid() and submission_form.is_valid():
-            bearer = bearer_form.save()
-            new_submission = submission_form.save(commit=False)
-            new_submission.bearer = bearer
-            if submission is None:
-                new_submission.status = PassportSubmission.Status.ENTERED
-                new_submission.entered_by = request.user
-            new_submission.save()
-            submission_form.save_m2m()
-            messages.success(
-                request,
-                f"Saved submission #{new_submission.intake_number} — "
-                f"{new_submission.stamp_count} stamps, "
-                f"{new_submission.raffle_tickets} raffle tickets.",
-            )
-            if submission is None:
-                return redirect('submission_new')
-            return redirect('submission_edit', pk=new_submission.pk)
-    else:
-        bearer_form = BearerForm(instance=submission.bearer if submission else None)
-        initial = {}
-        if submission is None:
-            current_season = Season.objects.filter(is_current=True).first()
-            if current_season:
-                initial['season'] = current_season
-        submission_form = PassportSubmissionForm(instance=submission, initial=initial)
-
+    bearer_form = BearerForm(instance=submission.bearer if submission else None)
+    checked_ids = (
+        set(submission.venues_stamped.values_list('pk', flat=True)) if submission else set()
+    )
     return render(
         request,
         'passports/submission_form.html',
         {
             'bearer_form': bearer_form,
-            'submission_form': submission_form,
             'submission': submission,
+            'venues': Venue.objects.filter(is_active=True),
+            'checked_ids': checked_ids,
+            'today': timezone.localdate().isoformat(),
         },
+    )
+
+
+@staff_member_required
+def bearer_save_view(request):
+    bearer_id = request.POST.get('bearer_id') or None
+    instance = get_object_or_404(Bearer, pk=bearer_id) if bearer_id else None
+    form = BearerForm(request.POST, instance=instance)
+    if not form.is_valid():
+        return JsonResponse({'ok': False, 'errors': form.errors}, status=400)
+    bearer = form.save()
+    return JsonResponse(
+        {
+            'ok': True,
+            'bearer': {
+                'id': bearer.pk,
+                'name': bearer.name,
+                'email': bearer.email,
+                'phone': bearer.phone,
+                'mailing_address': bearer.mailing_address,
+            },
+        }
+    )
+
+
+@staff_member_required
+def submission_save_view(request):
+    bearer_id = request.POST.get('bearer_id')
+    if not bearer_id:
+        return JsonResponse(
+            {'ok': False, 'errors': {'bearer_id': ['Save the bearer first.']}}, status=400
+        )
+    bearer = get_object_or_404(Bearer, pk=bearer_id)
+
+    submission_id = request.POST.get('submission_id') or None
+    venues = Venue.objects.filter(pk__in=request.POST.getlist('venues_stamped'), is_active=True)
+    date_received = parse_date(request.POST.get('date_received', '')) or timezone.localdate()
+    notes = request.POST.get('notes', '')
+
+    if submission_id:
+        submission = get_object_or_404(PassportSubmission, pk=submission_id)
+        submission.bearer = bearer
+        submission.date_received = date_received
+        submission.notes = notes
+        submission.save()
+        submission.venues_stamped.set(venues)
+    else:
+        season = Season.objects.current()
+        if season is None:
+            return JsonResponse(
+                {'ok': False, 'errors': {'season': ['No season exists yet — ask an admin to create one.']}},
+                status=400,
+            )
+        with transaction.atomic():
+            season = Season.objects.select_for_update().get(pk=season.pk)
+            next_number = (
+                PassportSubmission.objects.filter(season=season)
+                .aggregate(Max('intake_number'))['intake_number__max']
+                or 0
+            ) + 1
+            submission = PassportSubmission.objects.create(
+                season=season,
+                bearer=bearer,
+                intake_number=next_number,
+                date_received=date_received,
+                notes=notes,
+                status=PassportSubmission.Status.ENTERED,
+                entered_by=request.user,
+            )
+            submission.venues_stamped.set(venues)
+
+    return JsonResponse(
+        {
+            'ok': True,
+            'submission_id': submission.pk,
+            'intake_number': submission.intake_number,
+            'season': str(submission.season),
+            'stamp_count': submission.stamp_count,
+            'raffle_tickets': submission.raffle_tickets,
+        }
     )
 
 

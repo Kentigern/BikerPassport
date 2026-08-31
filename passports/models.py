@@ -11,8 +11,15 @@ class ConsentStatus(models.TextChoices):
     DECLINED = 'declined', 'Declined'
 
 
+class SeasonManager(models.Manager):
+    def current(self):
+        return self.filter(is_current=True).first() or self.order_by('-name').first()
+
+
 class Season(models.Model):
     """A year's Bike + Brew program (§4). Each season has its own submissions."""
+
+    objects = SeasonManager()
 
     name = models.CharField(max_length=20, unique=True, help_text="e.g. '2026'.")
     is_current = models.BooleanField(

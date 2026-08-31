@@ -52,15 +52,15 @@ Load/confirm the 296 cafes for the season (import from CSV or carry forward from
 
 ### 5.2 Passport intake (staff, the main workflow)
 
-1. Staff opens "New submission," selects the season (defaults to current).
-2. Enters bearer's personal details from the passport.
-3. Marks which cafes were stamped — a checklist of all 296, grouped/searchable for speed (296 checkboxes needs to be fast to work through; consider grouping by category/location if the cafe list has natural groupings, sortable by number).
+1. Staff opens "New submission." Season is always the current one — never picked manually.
+2. Enters bearer's personal details from the passport, or searches by name/phone to match an existing bearer, and saves — this can happen before any venues are ticked.
+3. Marks which cafes were stamped — a checklist of all 296, searchable, sortable by number — and saves; can be done in one pass or across several saves as the volunteer works through the passport.
 4. System computes stamp count and raffle tickets live as boxes are checked.
-5. Staff reviews and submits. Submission is saved with status "entered."
+5. Submission is saved with status "entered."
 6. Staff (or a batch action) triggers the confirmation email; status moves to "emailed" (see §5.3–5.6).
 
 At this volume (up to 5,000 passports, 30 volunteers, 6 weeks) two things become real requirements rather than nice-to-haves:
-- **No duplicate/missed processing.** A simple safeguard: log each physical passport in at intake with a sequential intake number before data entry begins, so two volunteers can't silently double-enter (or drop) the same passport. Doesn't need to be elaborate — could be as simple as a running "logged" list volunteers check off against. This is the staff/database-side half of the safeguard; the bearer-facing half is that every processed passport's corner is snipped before it's returned (see §1) so the *same physical passport* can't be resubmitted later for a second set of raffle tickets.
+- **No duplicate/missed processing.** The intake number is assigned automatically, atomically, by the system itself the first time any venue is saved for a passport (sequential per season) — this replaces the manual paper-log approach originally envisioned here, since the database now guarantees uniqueness without staff having to track a running list. This is the staff/database-side half of the safeguard; the bearer-facing half is that every processed passport's corner is snipped before it's returned (see §1) so the *same physical passport* can't be resubmitted later for a second set of raffle tickets.
 - **Progress visibility.** Admin should be able to see at a glance how many of the logged passports have been entered/emailed, so the charity can track the 6-week window and reassign volunteer effort if it's falling behind.
 
 ### 5.3 Confirmation email
