@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Audit Log — MARK Passport Administration</title>
+  <link rel="icon" href="https://makeyourmark.co.uk/wp-content/uploads/2025/08/MARK-Favicon-100x100.png">
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      margin: 2rem auto;
+      max-width: 1000px;
+      color: #222;
+      background: #f7f7f5;
+    }
+    .back-link {
+      display: inline-block;
+      margin-bottom: 1rem;
+      color: #2B2727;
+      font-size: .9rem;
+    }
+    h1 {
+      font-size: 1.4rem;
+      color: #2B2727;
+      margin-bottom: .3rem;
+    }
+    .subtitle {
+      color: #666;
+      margin-top: 0;
+      margin-bottom: 1.5rem;
+    }
+    .search-form {
+      margin-bottom: 1.5rem;
+      display: flex;
+      gap: .5rem;
+      flex-wrap: wrap;
+    }
+    .search-form input[type=text] {
+      flex: 1;
+      min-width: 200px;
+      padding: .5rem .7rem;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    .search-form select {
+      padding: .5rem .7rem;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background: #fff;
+    }
+    .search-form button {
+      padding: .5rem 1.2rem;
+      font-size: 1rem;
+      font-weight: bold;
+      background: #2B2727;
+      color: #efdaa4;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .search-form button:hover {
+      background: #443f3f;
+    }
+    .search-form a.clear-link {
+      align-self: center;
+      color: #666;
+      font-size: .85rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    th, td {
+      text-align: left;
+      padding: .6rem .8rem;
+      border-bottom: 1px solid #eee;
+      font-size: .9rem;
+      vertical-align: top;
+    }
+    th {
+      background: #2B2727;
+      color: #efdaa4;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    .when-cell {
+      white-space: nowrap;
+      color: #555;
+    }
+    .badge {
+      display: inline-block;
+      padding: .15rem .55rem;
+      border-radius: 999px;
+      font-size: .75rem;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+    .badge-bearer { background: #dbe9f6; color: #1c4a73; }
+    .badge-submission { background: #ddefdd; color: #1f5a1f; }
+    .badge-admin { background: #ece0f6; color: #4b2e73; }
+    .badge-raffle { background: #f6e9c9; color: #6b4e00; }
+    .empty-note {
+      color: #888;
+      padding: 1rem 0;
+    }
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 1.2rem;
+      font-size: .9rem;
+      color: #444;
+    }
+    .pagination a {
+      color: #2B2727;
+      font-weight: bold;
+      text-decoration: none;
+    }
+    .pagination .disabled {
+      color: #bbb;
+    }
+  </style>
+</head>
+<body>
+
+<a class="back-link" href="{% url 'dashboard' %}">&larr; Back to Dashboard</a>
+<h1>Audit Log</h1>
+<p class="subtitle">Bearer and submission changes, user/site admin actions, and raffle exports — newest first.</p>
+
+<form class="search-form" method="get">
+  <input type="text" name="q" value="{{ q }}" placeholder="Search by name or username…" autocomplete="off">
+  <select name="type" onchange="this.form.submit()">
+    <option value="" {% if not event_type %}selected{% endif %}>All events</option>
+    {% for key, label in event_types.items %}
+      <option value="{{ key }}" {% if event_type == key %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit">Search</button>
+  {% if q or event_type %}<a class="clear-link" href="{% url 'audit_log' %}">Clear</a>{% endif %}
+</form>
+
+<table>
+  <thead>
+    <tr>
+      <th>When</th>
+      <th>Category</th>
+      <th>Who</th>
+      <th>What</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for event in page %}
+      <tr>
+        <td class="when-cell">{{ event.timestamp|date:"Y-m-d H:i:s" }}</td>
+        <td><span class="badge badge-{{ event.category }}">{{ event.category_label }}</span></td>
+        <td>{{ event.actor }}</td>
+        <td>{{ event.summary }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="4" class="empty-note">No audit events {% if q %}match "{{ q }}"{% endif %}.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if page.paginator.num_pages > 1 %}
+  <div class="pagination">
+    {% if page.has_previous %}
+      <a href="?q={{ q }}&amp;type={{ event_type }}&amp;page={{ page.previous_page_number }}">&larr; Prev</a>
+    {% else %}
+      <span class="disabled">&larr; Prev</span>
+    {% endif %}
+    <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}
+      <a href="?q={{ q }}&amp;type={{ event_type }}&amp;page={{ page.next_page_number }}">Next &rarr;</a>
+    {% else %}
+      <span class="disabled">Next &rarr;</span>
+    {% endif %}
+  </div>
+{% endif %}
+
+</body>
+</html>

@@ -1,9 +1,11 @@
 import csv
 import random
 
+from django.contrib.admin.models import LogEntry
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.models import Count, Max, Q
 from django.http import HttpResponse, JsonResponse
@@ -143,19 +145,114 @@ def raffle_export_view(request):
     return response
 
 
+HISTORY_LABELS = {'+': 'Created', '~': 'Updated', '-': 'Deleted'}
+
+# Order controls the "All" dropdown's display order in the template too.
+EVENT_TYPES = {
+    'bearer': 'Bearer',
+    'submission': 'Submission',
+    'admin': 'User/Site Admin',
+    'raffle': 'Raffle export',
+}
+
+# Bounded per-source, applied after any search filter — cheap and correct
+# for this app's actual scale (a small yearly charity program). A single
+# cross-table SQL UNION would avoid the bound but isn't worth the added
+# complexity here.
+_EVENTS_PER_SOURCE = 300
+
+
+def _submission_summary(history_type, record):
+    # PassportSubmission.__str__ traverses .season/.bearer live — safe for
+    # a current row, but a historical row can point at an id that's since
+    # been deleted (e.g. the bearer itself was later removed), which
+    # raises DoesNotExist rather than just returning None like a
+    # SET_NULL/blank FK would. Build the summary from raw ids instead of
+    # calling str(record) so a stale reference degrades to a label rather
+    # than a 500.
+    try:
+        bearer_desc = str(record.bearer) if record.bearer_id else 'no bearer'
+    except Bearer.DoesNotExist:
+        bearer_desc = f"bearer #{record.bearer_id} (deleted)"
+    try:
+        season_desc = str(record.season) if record.season_id else 'no season'
+    except Season.DoesNotExist:
+        season_desc = f"season #{record.season_id} (deleted)"
+    return f"{HISTORY_LABELS[history_type]} — #{record.intake_number} ({season_desc}) — {bearer_desc}"
+
+
+def _event(category, timestamp, actor, summary):
+    return {
+        'category': category,
+        'category_label': EVENT_TYPES[category],
+        'timestamp': timestamp,
+        'actor': actor.username if actor else '—',
+        'summary': summary,
+    }
+
+
 @staff_member_required
-def raffle_audit_log_view(request):
+def audit_log_view(request):
+    """Merges three otherwise-separate audit trails into one timeline:
+    simple_history on Bearer/PassportSubmission (covers changes made via
+    *either* the raw admin or the custom intake-form views, since
+    HistoryRequestMiddleware attributes history_user regardless of entry
+    point), Django's built-in admin LogEntry (covers everything else
+    administered via the raw admin — Users, Groups, Venue, Season), and
+    RaffleExport. LogEntry is excluded for Bearer/PassportSubmission
+    specifically, since simple_history already covers those more
+    completely and duplicating them here would just be noise."""
     if not _is_site_admin(request.user):
         raise PermissionDenied
 
     q = request.GET.get('q', '').strip()
-    entries = RaffleExport.objects.select_related('season', 'generated_by').order_by('-generated_at')
-    if q:
-        entries = entries.filter(
-            Q(generated_by__username__icontains=q) | Q(season__name__icontains=q)
-        )
+    event_type = request.GET.get('type', '')
+    events = []
 
-    return render(request, 'passports/raffle_audit_log.html', {'entries': entries, 'q': q})
+    if event_type in ('', 'bearer'):
+        qs = Bearer.history.select_related('history_user')
+        if q:
+            qs = qs.filter(Q(history_user__username__icontains=q) | Q(name__icontains=q))
+        for r in qs.order_by('-history_date')[:_EVENTS_PER_SOURCE]:
+            events.append(
+                _event('bearer', r.history_date, r.history_user, f"{HISTORY_LABELS[r.history_type]} — {r}")
+            )
+
+    if event_type in ('', 'submission'):
+        qs = PassportSubmission.history.select_related('history_user')
+        if q:
+            qs = qs.filter(Q(history_user__username__icontains=q) | Q(bearer__name__icontains=q))
+        for r in qs.order_by('-history_date')[:_EVENTS_PER_SOURCE]:
+            events.append(
+                _event('submission', r.history_date, r.history_user, _submission_summary(r.history_type, r))
+            )
+
+    if event_type in ('', 'admin'):
+        qs = LogEntry.objects.exclude(
+            content_type__app_label='passports',
+            content_type__model__in=['bearer', 'passportsubmission'],
+        ).select_related('user', 'content_type')
+        if q:
+            qs = qs.filter(Q(user__username__icontains=q) | Q(object_repr__icontains=q))
+        for e in qs.order_by('-action_time')[:_EVENTS_PER_SOURCE]:
+            events.append(_event('admin', e.action_time, e.user, f"{e.object_repr} — {e.get_change_message()}"))
+
+    if event_type in ('', 'raffle'):
+        qs = RaffleExport.objects.select_related('season', 'generated_by')
+        if q:
+            qs = qs.filter(Q(generated_by__username__icontains=q) | Q(season__name__icontains=q))
+        for r in qs.order_by('-generated_at')[:_EVENTS_PER_SOURCE]:
+            events.append(_event('raffle', r.generated_at, r.generated_by, f"{r.season} — {r.entry_count} tickets"))
+
+    events.sort(key=lambda e: e['timestamp'], reverse=True)
+
+    page = Paginator(events, 50).get_page(request.GET.get('page'))
+
+    return render(
+        request,
+        'passports/audit_log.html',
+        {'page': page, 'q': q, 'event_type': event_type, 'event_types': EVENT_TYPES},
+    )
 
 
 @staff_member_required
