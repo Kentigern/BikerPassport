@@ -16,11 +16,12 @@
   var venueList = document.getElementById('venue-list');
   var stampCountEl = document.getElementById('stamp-count');
   var raffleTicketsEl = document.getElementById('raffle-tickets');
+  var MAX_RAFFLE_TICKETS = 28;
 
   function updateStampSummary() {
     var checked = venueList.querySelectorAll('input[type=checkbox]:checked').length;
     stampCountEl.textContent = checked;
-    raffleTicketsEl.textContent = Math.floor(checked / 10);
+    raffleTicketsEl.textContent = Math.min(Math.floor(checked / 10), MAX_RAFFLE_TICKETS);
   }
 
   venueList.addEventListener('change', updateStampSummary);

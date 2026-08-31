@@ -5,7 +5,7 @@
 
 ## 1. Purpose
 
-Make Your Mark runs an annual fundraiser, the **Bike + Brew Passport**. Each passport lists 296 named, numbered cafes. Bearers collect a stamp at a cafe each time they visit during the riding season, then mail the physical passport back to Make Your Mark at season's end.
+Make Your Mark runs an annual fundraiser, the **Bike + Brew Passport**. Each passport lists 296 named, numbered cafes. Bearers collect a stamp at a cafe each time they visit during the riding season. The passport then reaches data entry via one of three channels (not just mailing it in at season's end): left at a venue for a volunteer to collect later, posted directly to a staff contact, or handed to a volunteer in person at an organised event (e.g. the 2026-10-03/04 weekend), where it's often processed on the spot while the bearer waits. In every case, once a passport is processed its corner is physically snipped before it's returned to the bearer — the real-world safeguard against the same passport being entered twice for double raffle tickets.
 
 This project is a web application that helps Make Your Mark staff:
 
@@ -40,9 +40,9 @@ This is an internal, staff-facing data-entry and reporting tool — not a public
 
 - **Season** — e.g. "2026". Each season has its own set of processed passports. (The program is annual and will recur; modeling this now avoids a rework next year.)
 - **Cafe** — number (1–296), name. Reused season to season; editable by admins in case the list changes. *Naming note:* not every location on the list is strictly a cafe — "Venue" may be the more accurate long-term name for this entity; see §11.1 for why this matters beyond naming.
-- **Bearer** — personal details captured off the passport: name, email, mailing address, phone (optional). A bearer is a fresh record per submission unless staff explicitly match to an existing bearer — no assumption that identity is pre-registered. Also carries **consent/retention state**: consent status (`pending` / `granted` / `declined`), consent token (for the no-login email link), date requested, date responded, and a computed retention-expiry date for non-consenting bearers — see §5.6.
+- **Bearer** — personal details captured off the passport: name, mailing address, phone, email (optional — bearers skew older and this charity doesn't reliably collect email; **phone is the practical match key** for finding an existing bearer, not email). A bearer is a fresh record per submission unless staff explicitly match to an existing bearer — no assumption that identity is pre-registered. Also carries **consent/retention state**: consent status (`pending` / `granted` / `declined`), consent token (for the no-login email link), date requested, date responded, and a computed retention-expiry date for non-consenting bearers — see §5.6.
 - **Passport Submission** — one per returned physical passport, linked to a Season and a Bearer: date received, which Cafes were stamped (a checklist against the 296), processing status (received / entered / emailed), staff member who entered it, timestamp, notes field for anomalies (e.g. ambiguous stamp, duplicate cafe stamps).
-- **Derived per submission:** total stamp count, list of cafes visited, raffle tickets = `floor(stamp_count / 10)`.
+- **Derived per submission:** total stamp count, list of cafes visited, raffle tickets = `min(floor(stamp_count / 10), 28)` — **28 is a fixed cap**, confirmed by the charity, independent of how many of the 296 cafes exist in a given year.
 
 ## 5. Core Workflows
 
@@ -60,7 +60,7 @@ Load/confirm the 296 cafes for the season (import from CSV or carry forward from
 6. Staff (or a batch action) triggers the confirmation email; status moves to "emailed" (see §5.3–5.6).
 
 At this volume (up to 5,000 passports, 30 volunteers, 6 weeks) two things become real requirements rather than nice-to-haves:
-- **No duplicate/missed processing.** A simple safeguard: log each physical passport in at intake with a sequential intake number before data entry begins, so two volunteers can't silently double-enter (or drop) the same passport. Doesn't need to be elaborate — could be as simple as a running "logged" list volunteers check off against.
+- **No duplicate/missed processing.** A simple safeguard: log each physical passport in at intake with a sequential intake number before data entry begins, so two volunteers can't silently double-enter (or drop) the same passport. Doesn't need to be elaborate — could be as simple as a running "logged" list volunteers check off against. This is the staff/database-side half of the safeguard; the bearer-facing half is that every processed passport's corner is snipped before it's returned (see §1) so the *same physical passport* can't be resubmitted later for a second set of raffle tickets.
 - **Progress visibility.** Admin should be able to see at a glance how many of the logged passports have been entered/emailed, so the charity can track the 6-week window and reassign volunteer effort if it's falling behind.
 
 ### 5.3 Confirmation email

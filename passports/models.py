@@ -124,6 +124,8 @@ class Bearer(models.Model):
 class PassportSubmission(models.Model):
     """One returned physical passport (§4), linked to a Season and a Bearer."""
 
+    MAX_RAFFLE_TICKETS = 28
+
     class Status(models.TextChoices):
         RECEIVED = 'received', 'Received'
         ENTERED = 'entered', 'Entered'
@@ -180,4 +182,4 @@ class PassportSubmission(models.Model):
 
     @property
     def raffle_tickets(self):
-        return self.stamp_count // 10
+        return min(self.stamp_count // 10, self.MAX_RAFFLE_TICKETS)
