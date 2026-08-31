@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>MyM Passport Administration</title>
+  <title>MARK Passport Administration</title>
+  <link rel="icon" href="https://makeyourmark.co.uk/wp-content/uploads/2025/08/MARK-Favicon-100x100.png">
   <style>
     body {
       font-family: system-ui, sans-serif;
@@ -11,20 +12,20 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #f7f7f5;
-      color: #222;
+      background: #2B2727;
+      color: #efdaa4;
     }
     .user-bar {
       position: absolute;
       top: 1rem;
       right: 1.5rem;
       font-size: .85rem;
-      color: #666;
+      color: #c9b998;
     }
     .user-bar button {
       background: none;
       border: none;
-      color: #666;
+      color: #c9b998;
       text-decoration: underline;
       cursor: pointer;
       padding: 0;
@@ -35,21 +36,27 @@
     }
     h1 {
       font-size: 1.3rem;
-      color: #444;
+      color: #efdaa4;
+      margin-bottom: .4rem;
+    }
+    .tagline {
+      font-size: .95rem;
+      color: #c9b998;
       margin-bottom: 2.5rem;
+      font-style: italic;
     }
     .big-button {
       display: inline-block;
       font-size: 1.6rem;
       font-weight: bold;
       padding: 1.5rem 3rem;
-      background: #2a6b2a;
-      color: #fff;
+      background: #efdaa4;
+      color: #2B2727;
       text-decoration: none;
       border-radius: 10px;
     }
     .big-button:hover {
-      background: #1f5a1f;
+      background: #e0c785;
     }
   </style>
 </head>
@@ -64,7 +71,8 @@
 </div>
 
 <div class="card">
-  <h1>MyM Passport Administration</h1>
+  <h1>MARK Passport Administration</h1>
+  <p class="tagline">Ride united. Heal united.</p>
   <a class="big-button" href="{% url 'submission_new' %}">Log a Submission</a>
 </div>
 

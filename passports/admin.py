@@ -1,13 +1,32 @@
 from django.contrib import admin
+from django.shortcuts import redirect
 from simple_history.admin import SimpleHistoryAdmin
 
 from .access import is_bearer_verified, mark_bearer_verified
 from .models import Bearer, PassportSubmission, Season, Venue
 from .phone import normalize_uk_phone
 
-admin.site.site_header = "MyM Passport Administration"
-admin.site.site_title = "MyM Passport Administration"
-admin.site.index_title = "MyM Passport Administration"
+admin.site.site_header = "MARK Passport Administration"
+admin.site.site_title = "MARK Passport Administration"
+admin.site.index_title = "MARK Passport Administration"
+
+_default_admin_index = admin.site.index
+
+
+def _role_aware_admin_index(request, extra_context=None):
+    """`config.urls.root_redirect` already sends non-superusers to the
+    intake landing page instead of the raw admin — but that only fires for
+    the bare `/`. A non-superuser who lands on `/admin/` itself (bookmark,
+    typed URL, or the admin login's own default `next`) skipped that
+    routing entirely. Applying the same rule here keeps it consistent
+    without touching deep links (e.g. a bearer's change page), which stay
+    reachable for whatever a role's group permissions actually allow."""
+    if request.user.is_authenticated and not request.user.is_superuser:
+        return redirect('landing')
+    return _default_admin_index(request, extra_context)
+
+
+admin.site.index = _role_aware_admin_index
 
 
 @admin.register(Season)

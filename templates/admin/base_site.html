@@ -1,0 +1,42 @@
+{% extends "admin/base_site.html" %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  :root, html[data-theme="light"] {
+    --primary: #2B2727;
+    --secondary: #2B2727;
+    --accent: #efdaa4;
+    --header-color: #efdaa4;
+    --header-bg: #2B2727;
+    --header-branding-color: #efdaa4;
+    --breadcrumbs-bg: #2B2727;
+    --breadcrumbs-fg: #efdaa4;
+    --button-bg: #2B2727;
+    --button-hover-bg: #1f1c1c;
+    --default-button-bg: #1f1c1c;
+    --default-button-hover-bg: #2B2727;
+    --link-selected-fg: #2B2727;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --header-color: #efdaa4;
+      --header-bg: #2B2727;
+      --header-branding-color: #efdaa4;
+      --breadcrumbs-bg: #2B2727;
+      --breadcrumbs-fg: #efdaa4;
+      --button-bg: #efdaa4;
+      --button-hover-bg: #e0c785;
+    }
+  }
+  html[data-theme="dark"] {
+    --header-color: #efdaa4;
+    --header-bg: #2B2727;
+    --header-branding-color: #efdaa4;
+    --breadcrumbs-bg: #2B2727;
+    --breadcrumbs-fg: #efdaa4;
+    --button-bg: #efdaa4;
+    --button-hover-bg: #e0c785;
+  }
+</style>
+{% endblock %}

@@ -29,7 +29,9 @@ SECRET_KEY = os.environ.get(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = [h for h in os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',') if h]
+ALLOWED_HOSTS = [
+    h.strip() for h in os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',') if h.strip()
+]
 
 # Railway (and similar PaaS) terminate TLS at a proxy and forward plain HTTP
 # internally — without this, Django thinks every request is insecure, which
@@ -40,7 +42,9 @@ SECURE_SSL_REDIRECT = not DEBUG
 # Needs the full https://host — e.g. https://your-app.up.railway.app —
 # not just the hostname (that's what ALLOWED_HOSTS is for).
 CSRF_TRUSTED_ORIGINS = [
-    o for o in os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS', '').split(',') if o
+    o.strip()
+    for o in os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS', '').split(',')
+    if o.strip()
 ]
 
 SESSION_COOKIE_SECURE = not DEBUG
@@ -77,7 +81,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
