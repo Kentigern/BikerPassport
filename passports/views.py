@@ -1,4 +1,5 @@
 from django.contrib.admin.views.decorators import staff_member_required
+from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
 from django.db.models import Max
 from django.http import JsonResponse
@@ -6,14 +7,29 @@ from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 
+from .access import is_bearer_verified, mark_bearer_verified
 from .forms import BearerForm
 from .models import Bearer, PassportSubmission, Season, Venue
 from .phone import normalize_uk_phone
 
 
+def _permission_denied_json(message):
+    return JsonResponse({'ok': False, 'errors': {'permission': [message]}}, status=403)
+
+
 @staff_member_required
 def submission_form_view(request, pk=None):
     submission = get_object_or_404(PassportSubmission, pk=pk) if pk else None
+
+    if submission is None:
+        if not request.user.has_perm('passports.add_passportsubmission'):
+            raise PermissionDenied
+    else:
+        if not request.user.has_perm('passports.change_passportsubmission'):
+            raise PermissionDenied
+        if not is_bearer_verified(request, submission.bearer_id):
+            raise PermissionDenied
+
     bearer_form = BearerForm(instance=submission.bearer if submission else None)
     checked_ids = (
         set(submission.venues_stamped.values_list('pk', flat=True)) if submission else set()
@@ -34,11 +50,23 @@ def submission_form_view(request, pk=None):
 @staff_member_required
 def bearer_save_view(request):
     bearer_id = request.POST.get('bearer_id') or None
-    instance = get_object_or_404(Bearer, pk=bearer_id) if bearer_id else None
+
+    if bearer_id is None:
+        if not request.user.has_perm('passports.add_bearer'):
+            return _permission_denied_json('You do not have permission to add bearers.')
+        instance = None
+    else:
+        if not request.user.has_perm('passports.change_bearer'):
+            return _permission_denied_json('You do not have permission to change bearers.')
+        if not is_bearer_verified(request, bearer_id):
+            return _permission_denied_json('Search for this bearer by phone first.')
+        instance = get_object_or_404(Bearer, pk=bearer_id)
+
     form = BearerForm(request.POST, instance=instance)
     if not form.is_valid():
         return JsonResponse({'ok': False, 'errors': form.errors}, status=400)
     bearer = form.save()
+    mark_bearer_verified(request, bearer.pk)
     return JsonResponse(
         {
             'ok': True,
@@ -60,9 +88,18 @@ def submission_save_view(request):
         return JsonResponse(
             {'ok': False, 'errors': {'bearer_id': ['Save the bearer first.']}}, status=400
         )
+    if not is_bearer_verified(request, bearer_id):
+        return _permission_denied_json('Search for this bearer by phone first.')
     bearer = get_object_or_404(Bearer, pk=bearer_id)
 
     submission_id = request.POST.get('submission_id') or None
+    if submission_id:
+        if not request.user.has_perm('passports.change_passportsubmission'):
+            return _permission_denied_json('You do not have permission to change submissions.')
+    else:
+        if not request.user.has_perm('passports.add_passportsubmission'):
+            return _permission_denied_json('You do not have permission to add submissions.')
+
     venues = Venue.objects.filter(pk__in=request.POST.getlist('venues_stamped'), is_active=True)
     date_received = parse_date(request.POST.get('date_received', '')) or timezone.localdate()
     notes = request.POST.get('notes', '')
@@ -138,6 +175,9 @@ def bearer_search_view(request):
     """Phone is the access-control key for a bearer's details (per the
     charity's ask): searching by phone reveals full details, searching by
     name only confirms a match exists and prompts for the phone number."""
+    if not request.user.has_perm('passports.view_bearer'):
+        return _permission_denied_json('You do not have permission to view bearers.')
+
     q = request.GET.get('q', '').strip()
     results = []
     if q:
@@ -147,6 +187,7 @@ def bearer_search_view(request):
         if normalized_phone:
             bearers = Bearer.objects.filter(phone=normalized_phone)
             for b in bearers:
+                mark_bearer_verified(request, b.pk)
                 existing = (
                     PassportSubmission.objects.filter(bearer=b, season=season).first()
                     if season
