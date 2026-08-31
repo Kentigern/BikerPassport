@@ -23,6 +23,7 @@
     #bearer-search-results div { padding: .4rem .6rem; cursor: pointer; }
     #bearer-search-results div:hover { background: #eef; }
     #bearer-match-note { font-size: .85rem; color: #366; margin: .3rem 0; }
+    #bearer-phone-challenge { border: 1px solid #e0c96e; background: #fffceb; border-radius: 4px; padding: .6rem; margin: .5rem 0; }
 
     #intake-readout { font-weight: bold; background: #f0f0f0; border-radius: 4px; padding: .4rem .6rem; display: inline-block; }
 
@@ -47,6 +48,14 @@
   <label for="bearer-search">Search existing bearer (name or phone)</label>
   <input type="text" id="bearer-search" autocomplete="off" placeholder="Start typing a name or phone number…">
   <div id="bearer-search-results"></div>
+
+  <div id="bearer-phone-challenge" style="display: none;">
+    <label for="bearer-phone-challenge-input">Enter their phone number to access this bearer</label>
+    <input type="text" id="bearer-phone-challenge-input" autocomplete="off" placeholder="Phone number">
+    <button type="button" id="bearer-phone-challenge-btn">Verify</button>
+    <p id="bearer-phone-challenge-status"></p>
+  </div>
+
   <p id="bearer-match-note" style="display: none;"></p>
 
   {% for field in bearer_form %}

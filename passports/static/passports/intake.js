@@ -52,6 +52,10 @@
   var searchInput = document.getElementById('bearer-search');
   var resultsBox = document.getElementById('bearer-search-results');
   var matchNote = document.getElementById('bearer-match-note');
+  var phoneChallengeBox = document.getElementById('bearer-phone-challenge');
+  var phoneChallengeInput = document.getElementById('bearer-phone-challenge-input');
+  var phoneChallengeBtn = document.getElementById('bearer-phone-challenge-btn');
+  var phoneChallengeStatus = document.getElementById('bearer-phone-challenge-status');
   var bearerFields = {
     name: document.getElementById('id_name'),
     email: document.getElementById('id_email'),
@@ -64,6 +68,7 @@
   searchInput.addEventListener('input', function () {
     clearTimeout(searchTimer);
     var q = searchInput.value.trim();
+    phoneChallengeBox.style.display = 'none';
     if (!q) {
       resultsBox.style.display = 'none';
       resultsBox.innerHTML = '';
@@ -80,21 +85,50 @@
     resultsBox.innerHTML = '';
     if (!results.length) {
       resultsBox.style.display = 'none';
+      phoneChallengeBox.style.display = 'none';
       return;
     }
+
+    var anyNeedsPhone = results.some(function (b) { return b.needs_phone; });
+
     results.forEach(function (bearer) {
       var row = document.createElement('div');
-      var detail = [bearer.phone, bearer.email].filter(Boolean).join(' · ');
-      var text = bearer.name + (detail ? ' (' + detail + ')' : '');
-      if (bearer.submission_id) {
-        text += ' — already has a submission this season';
+      if (bearer.needs_phone) {
+        row.textContent = bearer.name + ' — enter their phone number below to access this record';
+      } else {
+        var detail = [bearer.phone, bearer.email].filter(Boolean).join(' · ');
+        var text = bearer.name + (detail ? ' (' + detail + ')' : '');
+        if (bearer.submission_id) {
+          text += ' — already has a submission this season';
+        }
+        row.textContent = text;
+        row.addEventListener('click', function () { pickBearer(bearer); });
       }
-      row.textContent = text;
-      row.addEventListener('click', function () { pickBearer(bearer); });
       resultsBox.appendChild(row);
     });
     resultsBox.style.display = 'block';
+
+    phoneChallengeStatus.textContent = '';
+    phoneChallengeBox.style.display = anyNeedsPhone ? 'block' : 'none';
   }
+
+  phoneChallengeBtn.addEventListener('click', function () {
+    var phone = phoneChallengeInput.value.trim();
+    if (!phone) return;
+    fetch('/passports/bearers/search/?q=' + encodeURIComponent(phone))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var match = data.results.find(function (b) { return !b.needs_phone; });
+        if (match) {
+          pickBearer(match);
+          phoneChallengeBox.style.display = 'none';
+          phoneChallengeInput.value = '';
+        } else {
+          phoneChallengeStatus.className = 'status-error';
+          phoneChallengeStatus.textContent = 'No bearer matches that phone number.';
+        }
+      });
+  });
 
   function pickBearer(bearer) {
     if (bearer.submission_id) {
@@ -142,8 +176,12 @@
         bearerSaveStatus.textContent = 'Bearer saved.';
         venueSaveButtons.forEach(function (btn) { btn.disabled = false; });
       } else {
+        var messages = [];
+        Object.keys(result.data.errors || {}).forEach(function (field) {
+          result.data.errors[field].forEach(function (msg) { messages.push(msg); });
+        });
         bearerSaveStatus.className = 'status-error';
-        bearerSaveStatus.textContent = 'Could not save bearer — check the fields above.';
+        bearerSaveStatus.textContent = messages.length ? messages.join(' ') : 'Could not save bearer — check the fields above.';
       }
     });
   });

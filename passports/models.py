@@ -86,7 +86,17 @@ class Bearer(models.Model):
         "old-school charity. Phone is the more reliable match key.",
     )
     mailing_address = models.TextField()
-    phone = models.CharField(max_length=30, blank=True)
+    phone = models.CharField(
+        max_length=30,
+        unique=True,
+        help_text="Stored normalized (E.164, e.g. +447990575555). The mandatory, "
+        "unique key for matching an existing bearer — not email, which many "
+        "bearers don't have.",
+        error_messages={
+            'unique': "A bearer with this phone number already exists — "
+            "search for them instead of creating a new record.",
+        },
+    )
 
     # Consent/retention state (§5.6). Purpose-specific from the start per §11.2 —
     # "keep me updated for next year" and "contact me about other MYM things" are

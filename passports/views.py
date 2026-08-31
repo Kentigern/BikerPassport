@@ -1,6 +1,6 @@
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db import IntegrityError, transaction
-from django.db.models import Max, Q
+from django.db.models import Max
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
@@ -8,6 +8,7 @@ from django.utils.dateparse import parse_date
 
 from .forms import BearerForm
 from .models import Bearer, PassportSubmission, Season, Venue
+from .phone import normalize_uk_phone
 
 
 @staff_member_required
@@ -134,27 +135,36 @@ def submission_save_view(request):
 
 @staff_member_required
 def bearer_search_view(request):
+    """Phone is the access-control key for a bearer's details (per the
+    charity's ask): searching by phone reveals full details, searching by
+    name only confirms a match exists and prompts for the phone number."""
     q = request.GET.get('q', '').strip()
     results = []
     if q:
         season = Season.objects.current()
-        bearers = Bearer.objects.filter(
-            Q(name__icontains=q) | Q(phone__icontains=q) | Q(email__icontains=q)
-        )[:10]
-        for b in bearers:
-            existing = (
-                PassportSubmission.objects.filter(bearer=b, season=season).first()
-                if season
-                else None
-            )
-            results.append(
-                {
-                    'id': b.pk,
-                    'name': b.name,
-                    'email': b.email,
-                    'phone': b.phone,
-                    'mailing_address': b.mailing_address,
-                    'submission_id': existing.pk if existing else None,
-                }
-            )
+        normalized_phone = normalize_uk_phone(q)
+
+        if normalized_phone:
+            bearers = Bearer.objects.filter(phone=normalized_phone)
+            for b in bearers:
+                existing = (
+                    PassportSubmission.objects.filter(bearer=b, season=season).first()
+                    if season
+                    else None
+                )
+                results.append(
+                    {
+                        'id': b.pk,
+                        'name': b.name,
+                        'email': b.email,
+                        'phone': b.phone,
+                        'mailing_address': b.mailing_address,
+                        'submission_id': existing.pk if existing else None,
+                        'needs_phone': False,
+                    }
+                )
+        else:
+            for b in Bearer.objects.filter(name__icontains=q)[:10]:
+                results.append({'name': b.name, 'needs_phone': True})
+
     return JsonResponse({'results': results})

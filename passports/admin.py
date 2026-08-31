@@ -19,6 +19,19 @@ class AdminOnlyMixin:
         return request.user.is_superuser
 
 
+class SuperuserOnlyMixin(AdminOnlyMixin):
+    """Like AdminOnlyMixin, but also hides the model entirely from non-admin
+    staff — used for Bearer, where phone/email/address must not be casually
+    browsable. Staff reach bearer records only through the intake form's
+    phone-gated search, never through this admin."""
+
+    def has_module_permission(self, request):
+        return request.user.is_superuser
+
+    def has_view_permission(self, request, obj=None):
+        return request.user.is_superuser
+
+
 @admin.register(Season)
 class SeasonAdmin(AdminOnlyMixin, admin.ModelAdmin):
     list_display = ['name', 'is_current', 'raffle_concluded_at', 'retention_grace_period_days']
@@ -34,7 +47,7 @@ class VenueAdmin(AdminOnlyMixin, admin.ModelAdmin):
 
 
 @admin.register(Bearer)
-class BearerAdmin(SimpleHistoryAdmin):
+class BearerAdmin(SuperuserOnlyMixin, SimpleHistoryAdmin):
     list_display = [
         'name',
         'email',
