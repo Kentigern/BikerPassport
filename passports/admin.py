@@ -42,6 +42,11 @@ class BearerAdmin(SimpleHistoryAdmin):
         'retention_expiry_date',
     ]
     search_fields = ['phone']
+    search_help_text = (
+        "Enter a bearer's exact phone number to find them — this list never "
+        "browses freely, and searching by name isn't supported here (privacy "
+        "control, §5.2). Use the intake form's search for name lookups."
+    )
     list_filter = ['next_season_consent_status', 'marketing_consent_status']
     readonly_fields = ['consent_token']
 

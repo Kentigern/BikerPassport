@@ -9,9 +9,13 @@ from django.utils import timezone
 
 from passports.models import Bearer, PassportSubmission, Season, Venue
 
-# Phone numbers use Ofcom's range reserved for fictional/drama use
-# (07700 900000-900999) - guaranteed to never collide with a real number,
-# and a clear signal to anyone who recognises it that this is demo data.
+# Phone numbers use the 07700 100xxx block, a distinctly patterned range
+# unlikely to be real. (Ofcom's actual "reserved for fiction" range,
+# 07700 900000-900999, seems safer but backfires: it's excluded from
+# libphonenumber's valid-number metadata *because* it's not allocated to
+# any operator, so it fails our own phone validation and can never be
+# found by search - the fictional block doesn't survive contact with a
+# validator that's supposed to reject exactly that kind of number.)
 # (name, phone suffix, mailing_address, stamp_count, notes, status)
 DEMO_BEARERS = [
     ("Megan Pritchard", "001", "12 Bryn Road, Bangor, LL57 2AB", 8, "", "entered"),
@@ -56,7 +60,7 @@ class Command(BaseCommand):
     help = (
         "Seed (or refresh) realistic demo data: ~18 fictional bearers with "
         "varying stamp counts, for the current season. Idempotent - safe to "
-        "re-run, matches existing demo bearers by their reserved fictional "
+        "re-run, matches existing demo bearers by their distinctly-patterned "
         "phone number rather than creating duplicates."
     )
 
@@ -68,7 +72,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        phones = [f"+447700900{suffix}" for _, suffix, *_ in DEMO_BEARERS]
+        phones = [f"+447700100{suffix}" for _, suffix, *_ in DEMO_BEARERS]
 
         if options['clear']:
             bearers = Bearer.objects.filter(phone__in=phones)
@@ -91,7 +95,7 @@ class Command(BaseCommand):
 
         created, updated = 0, 0
         for i, (name, suffix, address, stamp_count, notes, status) in enumerate(DEMO_BEARERS):
-            phone = f"+447700900{suffix}"
+            phone = f"+447700100{suffix}"
             rng = random.Random(phone)
 
             bearer, bearer_created = Bearer.objects.update_or_create(
