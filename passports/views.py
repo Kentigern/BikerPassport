@@ -1,7 +1,8 @@
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
-from django.db.models import Max
+from django.db.models import Count, Max, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
@@ -20,6 +21,76 @@ def _permission_denied_json(message):
 @staff_member_required
 def landing_view(request):
     return render(request, 'passports/landing.html')
+
+
+def _ranked(queryset, count_attr):
+    """Attach each item's share of the list's own max as `pct`, so the
+    template can size a CSS bar without doing division itself."""
+    items = list(queryset)
+    max_count = getattr(items[0], count_attr) if items else 0
+    return [
+        {'obj': item, 'count': getattr(item, count_attr), 'pct': round(getattr(item, count_attr) / max_count * 100)}
+        for item in items
+    ]
+
+
+@staff_member_required
+def dashboard_view(request):
+    if not (
+        request.user.is_superuser or request.user.groups.filter(name='Site Admin').exists()
+    ):
+        raise PermissionDenied
+
+    season = Season.objects.current()
+    context = {'season': season}
+
+    if season is None:
+        return render(request, 'passports/dashboard.html', context)
+
+    submissions = PassportSubmission.objects.filter(season=season)
+
+    top_venues = _ranked(
+        Venue.objects.annotate(
+            visit_count=Count('submissions', filter=Q(submissions__season=season))
+        )
+        .filter(visit_count__gt=0)
+        .order_by('-visit_count', 'name'),
+        'visit_count',
+    )[:5]
+
+    top_loggers = _ranked(
+        get_user_model()
+        .objects.annotate(
+            logged_count=Count('entered_submissions', filter=Q(entered_submissions__season=season))
+        )
+        .filter(logged_count__gt=0)
+        .order_by('-logged_count', 'username'),
+        'logged_count',
+    )[:5]
+
+    top_bearers = _ranked(
+        Bearer.objects.annotate(
+            venues_visited=Count(
+                'submissions__venues_stamped',
+                filter=Q(submissions__season=season),
+                distinct=True,
+            )
+        )
+        .filter(venues_visited__gt=0)
+        .order_by('-venues_visited', 'name'),
+        'venues_visited',
+    )[:5]
+
+    context.update(
+        {
+            'total_logged': submissions.count(),
+            'logged_today': submissions.filter(created_at__date=timezone.localdate()).count(),
+            'top_venues': top_venues,
+            'top_loggers': top_loggers,
+            'top_bearers': top_bearers,
+        }
+    )
+    return render(request, 'passports/dashboard.html', context)
 
 
 @staff_member_required

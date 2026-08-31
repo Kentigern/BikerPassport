@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Dashboard — MARK Passport Administration</title>
+  <link rel="icon" href="https://makeyourmark.co.uk/wp-content/uploads/2025/08/MARK-Favicon-100x100.png">
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      color: #222;
+      background: #f7f7f5;
+    }
+
+    /* Sidebar */
+    #sidebar {
+      width: 240px;
+      flex-shrink: 0;
+      background: #2B2727;
+      color: #efdaa4;
+      padding: 1.5rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: .75rem;
+    }
+    #sidebar h2 {
+      font-size: 1rem;
+      margin: 0 0 1rem;
+      color: #efdaa4;
+    }
+    .nav-button {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      text-align: center;
+      font-size: 1.05rem;
+      font-weight: bold;
+      padding: 1rem;
+      background: #efdaa4;
+      color: #2B2727;
+      text-decoration: none;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .nav-button:hover {
+      background: #e0c785;
+    }
+    .nav-button.secondary {
+      background: transparent;
+      color: #efdaa4;
+      border: 1px solid #efdaa4;
+    }
+    .nav-button.secondary:hover {
+      background: rgba(239, 218, 164, .12);
+    }
+
+    /* Main content */
+    #main {
+      flex: 1;
+      padding: 2rem;
+    }
+    #main h1 {
+      margin-top: 0;
+      font-size: 1.5rem;
+      color: #2B2727;
+    }
+    .season-note {
+      color: #666;
+      margin-top: -.5rem;
+    }
+
+    .stat-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .stat-card {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
+    }
+    .stat-card .value {
+      font-size: 2.5rem;
+      font-weight: bold;
+      color: #2B2727;
+    }
+    .stat-card .label {
+      color: #666;
+      font-size: .9rem;
+    }
+
+    .panels {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+    .panel {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
+    }
+    .panel h3 {
+      margin-top: 0;
+      font-size: 1rem;
+      color: #2B2727;
+    }
+    .rank-row {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      margin: .5rem 0;
+    }
+    .rank-number {
+      width: 1.4rem;
+      color: #999;
+      font-size: .85rem;
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .rank-bar-wrap {
+      flex: 1;
+      background: #f0ece2;
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+      height: 1.8rem;
+    }
+    .rank-bar {
+      background: #efdaa4;
+      height: 100%;
+    }
+    .rank-label {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 .6rem;
+      font-size: .85rem;
+      color: #2B2727;
+    }
+    .empty-note {
+      color: #888;
+      font-size: .85rem;
+    }
+  </style>
+</head>
+<body>
+
+<nav id="sidebar">
+  <h2>MARK Passport Administration</h2>
+  <a class="nav-button" href="{% url 'submission_new' %}">Log a Submission</a>
+  <a class="nav-button secondary" href="{% url 'admin:index' %}">Site Administration</a>
+  <form method="post" action="{% url 'admin:logout' %}">
+    {% csrf_token %}
+    <button type="submit" class="nav-button secondary">Logout</button>
+  </form>
+</nav>
+
+<main id="main">
+  <h1>Dashboard</h1>
+  {% if season %}
+    <p class="season-note">Season: {{ season }}</p>
+  {% else %}
+    <p class="season-note">No active season configured yet.</p>
+  {% endif %}
+
+  {% if season %}
+    <div class="stat-cards">
+      <div class="stat-card">
+        <div class="value">{{ total_logged }}</div>
+        <div class="label">Total Passports Logged</div>
+      </div>
+      <div class="stat-card">
+        <div class="value">{{ logged_today }}</div>
+        <div class="label">Passports Logged Today</div>
+      </div>
+    </div>
+
+    <div class="panels">
+      <div class="panel">
+        <h3>Top 5 Venues by Visits</h3>
+        {% for row in top_venues %}
+          <div class="rank-row">
+            <span class="rank-number">{{ forloop.counter }}</span>
+            <div class="rank-bar-wrap">
+              <div class="rank-bar" style="width: {{ row.pct }}%;"></div>
+              <div class="rank-label">
+                <span>{{ row.obj.name }}</span>
+                <span>{{ row.count }}</span>
+              </div>
+            </div>
+          </div>
+        {% empty %}
+          <p class="empty-note">No venues stamped yet this season.</p>
+        {% endfor %}
+      </div>
+
+      <div class="panel">
+        <h3>Top 5 Loggers by Passports Logged</h3>
+        {% for row in top_loggers %}
+          <div class="rank-row">
+            <span class="rank-number">{{ forloop.counter }}</span>
+            <div class="rank-bar-wrap">
+              <div class="rank-bar" style="width: {{ row.pct }}%;"></div>
+              <div class="rank-label">
+                <span>{{ row.obj.get_full_name|default:row.obj.username }}</span>
+                <span>{{ row.count }}</span>
+              </div>
+            </div>
+          </div>
+        {% empty %}
+          <p class="empty-note">No submissions logged yet this season.</p>
+        {% endfor %}
+      </div>
+
+      <div class="panel">
+        <h3>Top 5 Bearers by Venues Visited</h3>
+        {% for row in top_bearers %}
+          <div class="rank-row">
+            <span class="rank-number">{{ forloop.counter }}</span>
+            <div class="rank-bar-wrap">
+              <div class="rank-bar" style="width: {{ row.pct }}%;"></div>
+              <div class="rank-label">
+                <span>{{ row.obj.name }}</span>
+                <span>{{ row.count }}</span>
+              </div>
+            </div>
+          </div>
+        {% empty %}
+          <p class="empty-note">No bearers logged yet this season.</p>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+</main>
+
+</body>
+</html>

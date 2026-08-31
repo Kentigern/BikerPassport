@@ -20,8 +20,17 @@ def _role_aware_admin_index(request, extra_context=None):
     typed URL, or the admin login's own default `next`) skipped that
     routing entirely. Applying the same rule here keeps it consistent
     without touching deep links (e.g. a bearer's change page), which stay
-    reachable for whatever a role's group permissions actually allow."""
-    if request.user.is_authenticated and not request.user.is_superuser:
+    reachable for whatever a role's group permissions actually allow.
+
+    Site Admins are exempt from the bounce (same as superusers) — the
+    dashboard's own "Site Administration" button links straight to this
+    same index, and bouncing them back to the landing page would turn that
+    button into a redirect loop."""
+    if (
+        request.user.is_authenticated
+        and not request.user.is_superuser
+        and not request.user.groups.filter(name='Site Admin').exists()
+    ):
         return redirect('landing')
     return _default_admin_index(request, extra_context)
 

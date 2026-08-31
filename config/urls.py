@@ -22,9 +22,14 @@ from django.urls import include, path, reverse
 def root_redirect(request):
     """Routes by role rather than a single fixed destination — a
     superuser's post-login `next` shouldn't get hijacked into the
-    intake-only landing page meant for Passport Logger-type staff."""
+    intake-only landing page meant for Passport Logger-type staff.
+    Site Admin group membership is checked first and overrides the
+    superuser branch too — a superuser who's also a Site Admin still
+    lands on the dashboard, not the raw admin index."""
     if not request.user.is_authenticated:
         return redirect(f"{reverse('admin:login')}?next=/")
+    if request.user.groups.filter(name='Site Admin').exists():
+        return redirect('dashboard')
     if request.user.is_superuser:
         return redirect('admin:index')
     return redirect('landing')
