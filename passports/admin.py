@@ -163,6 +163,7 @@ class RaffleExportAdmin(admin.ModelAdmin):
 
     list_display = ['season', 'generated_by', 'generated_at', 'entry_count']
     list_filter = ['season']
+    search_fields = ['generated_by__username', 'season__name']
 
     def has_add_permission(self, request):
         return False
