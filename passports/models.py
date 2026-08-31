@@ -72,7 +72,11 @@ class Bearer(models.Model):
     unless staff explicitly match to an existing bearer."""
 
     name = models.CharField(max_length=200)
-    email = models.EmailField()
+    email = models.EmailField(
+        blank=True,
+        help_text="Often not collected — bearers skew older and this is an "
+        "old-school charity. Phone is the more reliable match key.",
+    )
     mailing_address = models.TextField()
     phone = models.CharField(max_length=30, blank=True)
 

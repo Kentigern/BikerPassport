@@ -1,0 +1,6 @@
+{% extends "admin/change_list.html" %}
+
+{% block object-tools-items %}
+  <li><a href="{% url 'submission_new' %}">+ New submission</a></li>
+  {{ block.super }}
+{% endblock %}

@@ -1,0 +1,107 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{% if submission %}Edit submission #{{ submission.intake_number }}{% else %}New submission{% endif %} — Bike + Brew</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem auto; max-width: 900px; color: #222; }
+    h1 { font-size: 1.4rem; }
+    fieldset { border: 1px solid #ccc; border-radius: 6px; margin-bottom: 1.5rem; padding: 1rem; }
+    legend { font-weight: bold; padding: 0 .5rem; }
+    label { display: block; margin: .5rem 0 .2rem; font-size: .9rem; }
+    input[type=text], input[type=email], input[type=number], input[type=date], textarea, select {
+      width: 100%; box-sizing: border-box; padding: .4rem; font-size: 1rem;
+    }
+    .errorlist { color: #b00020; margin: 0 0 .3rem; padding: 0; list-style: none; font-size: .85rem; }
+    .messages { list-style: none; padding: 0; }
+    .messages li { background: #e6f4ea; border: 1px solid #a6d8b8; padding: .5rem .8rem; border-radius: 4px; margin-bottom: 1rem; }
+
+    #bearer-search-results { border: 1px solid #ccc; border-top: none; max-height: 200px; overflow-y: auto; display: none; }
+    #bearer-search-results div { padding: .4rem .6rem; cursor: pointer; }
+    #bearer-search-results div:hover { background: #eef; }
+    #bearer-match-note { font-size: .85rem; color: #366; margin: .3rem 0; }
+
+    #venue-list { max-height: 420px; overflow-y: auto; border: 1px solid #ddd; padding: .5rem; }
+    .venue-row { display: block; font-size: .9rem; padding: .15rem 0; }
+    #stamp-summary { position: sticky; top: 0; background: #fff8dc; border: 1px solid #e0c96e; padding: .5rem .8rem; margin-bottom: .5rem; font-weight: bold; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+{% if messages %}
+  <ul class="messages">
+    {% for message in messages %}<li>{{ message }}</li>{% endfor %}
+  </ul>
+{% endif %}
+
+<h1>{% if submission %}Edit submission #{{ submission.intake_number }}{% else %}New submission{% endif %}</h1>
+
+<form method="post">
+  {% csrf_token %}
+  <input type="hidden" name="bearer_id" id="bearer_id"
+         value="{% if submission %}{{ submission.bearer_id }}{% endif %}">
+
+  <fieldset>
+    <legend>Bearer</legend>
+
+    <label for="bearer-search">Search existing bearer (name or phone)</label>
+    <input type="text" id="bearer-search" autocomplete="off" placeholder="Start typing a name or phone number…">
+    <div id="bearer-search-results"></div>
+    <p id="bearer-match-note" style="display: none;"></p>
+
+    {{ bearer_form.non_field_errors }}
+    {% for field in bearer_form %}
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field.errors }}
+      {{ field }}
+    {% endfor %}
+  </fieldset>
+
+  <fieldset>
+    <legend>Submission</legend>
+    {{ submission_form.non_field_errors }}
+
+    <label for="{{ submission_form.season.id_for_label }}">{{ submission_form.season.label }}</label>
+    {{ submission_form.season.errors }}
+    {{ submission_form.season }}
+
+    <label for="{{ submission_form.intake_number.id_for_label }}">{{ submission_form.intake_number.label }}</label>
+    {{ submission_form.intake_number.errors }}
+    {{ submission_form.intake_number }}
+
+    <label for="{{ submission_form.date_received.id_for_label }}">{{ submission_form.date_received.label }}</label>
+    {{ submission_form.date_received.errors }}
+    {{ submission_form.date_received }}
+  </fieldset>
+
+  <fieldset>
+    <legend>Venues stamped</legend>
+    {{ submission_form.venues_stamped.errors }}
+
+    <div id="stamp-summary">Stamps: <span id="stamp-count">0</span> — Raffle tickets: <span id="raffle-tickets">0</span></div>
+
+    <label for="venue-filter">Filter venues…</label>
+    <input type="text" id="venue-filter" autocomplete="off" placeholder="Type a name or number">
+
+    <div id="venue-list">
+      {% for checkbox in submission_form.venues_stamped %}
+        <label class="venue-row" data-search="{{ checkbox.choice_label|lower }}">
+          {{ checkbox.tag }} {{ checkbox.choice_label }}
+        </label>
+      {% endfor %}
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Notes</legend>
+    {{ submission_form.notes.errors }}
+    {{ submission_form.notes }}
+  </fieldset>
+
+  <button type="submit">Save submission</button>
+</form>
+
+<script src="{% static 'passports/intake.js' %}"></script>
+</body>
+</html>
