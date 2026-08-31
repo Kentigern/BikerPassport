@@ -84,7 +84,7 @@ def dashboard_view(request):
     context.update(
         {
             'total_logged': submissions.count(),
-            'logged_today': submissions.filter(created_at__date=timezone.localdate()).count(),
+            'logged_today': submissions.filter(date_received=timezone.localdate()).count(),
             'top_venues': top_venues,
             'top_loggers': top_loggers,
             'top_bearers': top_bearers,
