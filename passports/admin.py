@@ -5,6 +5,10 @@ from .access import is_bearer_verified, mark_bearer_verified
 from .models import Bearer, PassportSubmission, Season, Venue
 from .phone import normalize_uk_phone
 
+admin.site.site_header = "MyM Passport Administration"
+admin.site.site_title = "MyM Passport Administration"
+admin.site.index_title = "MyM Passport Administration"
+
 
 @admin.register(Season)
 class SeasonAdmin(admin.ModelAdmin):
