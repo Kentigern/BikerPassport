@@ -52,6 +52,15 @@ class Venue(models.Model):
     number = models.PositiveSmallIntegerField(unique=True, help_text="Passport number, 1-296.")
     name = models.CharField(max_length=200)
     address = models.TextField(blank=True)
+    page_group = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Which physical passport page-spread this venue appears on "
+        "(e.g. 'img001.pdf') — groups venues into pages for the intake "
+        "form's Book view (§5.2). Pages can have fewer than 12 venues "
+        "where the original book had section-divider artwork instead of "
+        "a full page of listings.",
+    )
 
     # Room for a future simple CRM (§11.1) — most of these stay empty for now.
     category = models.CharField(max_length=100, blank=True)

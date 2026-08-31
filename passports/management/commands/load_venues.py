@@ -7,13 +7,17 @@ from passports.models import Venue
 
 class Command(BaseCommand):
     help = (
-        "Load/update the Venue list from a CSV with Number,Name,Address columns "
-        "(§5.1 cafe list setup). Existing venues are matched by number and updated "
-        "in place; new numbers are created."
+        "Load/update the Venue list from a CSV with Number,Name,Address columns, "
+        "plus an optional image_file column used as page_group (§5.1 cafe list "
+        "setup). Existing venues are matched by number and updated in place; new "
+        "numbers are created."
     )
 
     def add_arguments(self, parser):
-        parser.add_argument('csv_path', help="Path to a CSV with Number,Name,Address columns.")
+        parser.add_argument(
+            'csv_path',
+            help="Path to a CSV with Number,Name,Address columns (image_file optional).",
+        )
 
     def handle(self, *args, **options):
         path = options['csv_path']
@@ -31,6 +35,7 @@ class Command(BaseCommand):
                     defaults={
                         'name': row['Name'],
                         'address': row.get('Address', ''),
+                        'page_group': row.get('image_file', ''),
                     },
                 )
                 created += was_created

@@ -45,22 +45,37 @@
   var nextBtn = document.getElementById('book-next-btn');
   var pageIndicator = document.getElementById('book-page-indicator');
 
-  var VENUES_PER_PAGE = 12;
-  var totalPages = Math.max(1, Math.ceil(venueRows.length / VENUES_PER_PAGE));
+  // Pages follow the book's real section breaks (data-page-group, from
+  // each venue's source page-spread) rather than a fixed 12-per-page
+  // count — some pages had fewer than 12 slots where the original book
+  // had section-divider artwork instead of a full page of listings.
+  var pages = [];
+  (function buildPages() {
+    var groupStart = 0;
+    var currentGroup = venueRows.length ? venueRows[0].dataset.pageGroup : null;
+    venueRows.forEach(function (row, i) {
+      if (row.dataset.pageGroup !== currentGroup) {
+        pages.push({ start: groupStart, end: i });
+        groupStart = i;
+        currentGroup = row.dataset.pageGroup;
+      }
+    });
+    if (venueRows.length) pages.push({ start: groupStart, end: venueRows.length });
+  })();
+  var totalPages = Math.max(1, pages.length);
   var currentPage = 0;
 
-  // Places a page's 12 venues the way the physical book does: venues 1-6
-  // down the left page (col 1 = 1,3,5 / col 2 = 2,4,6), venues 7-12 down
-  // the right page (col 3 = 7,9,11 / col 4 = 8,10,12) — not a plain
+  // Places a page's venues the way the physical book does: the first up
+  // to 6 down the left page (col 1 = 1st,3rd,5th / col 2 = 2nd,4th,6th),
+  // the rest down the right page (col 3 / col 4) — not a plain
   // left-to-right fill across all 4 columns.
   function renderBookPage() {
-    var start = currentPage * VENUES_PER_PAGE;
-    var end = start + VENUES_PER_PAGE;
+    var page = pages[currentPage] || { start: 0, end: 0 };
     venueRows.forEach(function (row, i) {
-      var visible = i >= start && i < end;
+      var visible = i >= page.start && i < page.end;
       row.classList.toggle('book-visible', visible);
       if (visible) {
-        var posInPage = i - start;              // 0-11
+        var posInPage = i - page.start;
         var half = posInPage < 6 ? 0 : 1;        // 0 = left page, 1 = right page
         var withinHalf = posInPage % 6;          // 0-5
         row.style.gridColumn = half * 2 + (withinHalf % 2) + 1;  // 1,2 or 3,4

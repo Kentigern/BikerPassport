@@ -181,7 +181,7 @@
 
   <div id="venue-list">
     {% for venue in venues %}
-      <label class="venue-row" data-search="{{ venue.number }} {{ venue.name|lower }}">
+      <label class="venue-row" data-search="{{ venue.number }} {{ venue.name|lower }}" data-page-group="{{ venue.page_group }}">
         <input type="checkbox" value="{{ venue.pk }}" {% if venue.pk in checked_ids %}checked{% endif %}>
         <span class="venue-badge">{{ venue.number }}</span><span class="venue-name">{{ venue.name }}</span>
       </label>

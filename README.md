@@ -43,7 +43,7 @@ Internal staff tool for Make Your Mark's annual Bike + Brew fundraiser — see
    python manage.py createsuperuser
    ```
 
-6. (Optional) Load the venue list from a CSV with `Number,Name,Address` columns — `page_scans/all_venues.csv` has the current season's 296 venues, OCR'd from the passport scans:
+6. (Optional) Load the venue list from a CSV with `Number,Name,Address` columns (plus optional `image_file`, imported as `page_group` — which page-spread each venue appears on in the physical book, used by the intake form's Book view) — `page_scans/all_venues.csv` has the current season's 296 venues, OCR'd from the passport scans:
 
    ```sh
    python manage.py load_venues page_scans/all_venues.csv
