@@ -31,6 +31,21 @@ DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = [h for h in os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',') if h]
 
+# Railway (and similar PaaS) terminate TLS at a proxy and forward plain HTTP
+# internally — without this, Django thinks every request is insecure, which
+# breaks CSRF and any is-this-request-secure checks.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = not DEBUG
+
+# Needs the full https://host — e.g. https://your-app.up.railway.app —
+# not just the hostname (that's what ALLOWED_HOSTS is for).
+CSRF_TRUSTED_ORIGINS = [
+    o for o in os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS', '').split(',') if o
+]
+
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+
 
 # Application definition
 
@@ -47,6 +62,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -80,9 +96,14 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 #
 # Postgres in production (§7 of SPEC.md); SQLite is fine for local dev.
-# Set POSTGRES_DB (and friends) in .env to switch to Postgres.
+# DATABASE_URL (as Railway's Postgres plugin provides) takes priority if
+# set; otherwise falls back to the split POSTGRES_* vars, then SQLite.
 
-if os.environ.get('POSTGRES_DB'):
+if os.environ.get('DATABASE_URL'):
+    import dj_database_url
+
+    DATABASES = {'default': dj_database_url.parse(os.environ['DATABASE_URL'], conn_max_age=600)}
+elif os.environ.get('POSTGRES_DB'):
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -137,6 +158,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
+}
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

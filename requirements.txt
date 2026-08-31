@@ -3,3 +3,6 @@ psycopg2-binary
 python-dotenv
 django-simple-history
 phonenumbers
+gunicorn
+whitenoise
+dj-database-url

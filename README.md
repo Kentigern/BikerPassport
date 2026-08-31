@@ -67,7 +67,7 @@ Internal staff tool for Make Your Mark's annual Bike + Brew fundraiser — see
 
 - **Landing page** (`/passports/`) — a single "Log a Submission" button, the entry point for Passport Logger-type staff whose only job is intake. Good URL to bookmark/hand out to volunteers instead of `/admin/`.
 - **Admin** (`/admin/`) — manage seasons, venues, and look up/correct existing bearers and submissions.
-- **New submission** (`/passports/submissions/new/`, also linked from the submissions admin page and the landing page) — the fast passport-intake form: search for an existing bearer by name/phone or enter a new one, check off stamped venues, and save. The same form (`/passports/submissions/<id>/edit/`) is used to correct an existing submission. Two venue-checklist styles, toggleable per staff member (remembered via the browser's local storage): **List view** (searchable, scrolling, default) and **Book view** (a paginated 4-column grid echoing the physical passport's own page layout, 12 venues per page).
+- **New submission** (`/passports/submissions/new/`, also linked from the submissions admin page and the landing page) — the fast passport-intake form: search for an existing bearer by name/phone or enter a new one, check off stamped venues, and save. The same form (`/passports/submissions/<id>/edit/`) is used to correct an existing submission. Two venue-checklist styles, toggleable per staff member (remembered via the browser's local storage): **List view** (searchable, scrolling, default) and **Book view** (a paginated 4-column grid echoing the physical passport's own page layout, including its real section breaks).
 - **Audit history** — open a Bearer or Passport submission in the admin and click **History** (top right of its page) to see every change, who made it, and when — including edits made through the intake form, not just the admin.
 
 ## Project layout
@@ -78,4 +78,25 @@ Internal staff tool for Make Your Mark's annual Bike + Brew fundraiser — see
 
 ## Switching to PostgreSQL
 
-Set `POSTGRES_DB` (and `POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_HOST`/`POSTGRES_PORT` as needed) in `.env` — leaving `POSTGRES_DB` unset falls back to SQLite.
+Set `DATABASE_URL` (a single connection string, as Railway's Postgres plugin provides), or the split `POSTGRES_DB`/`POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_HOST`/`POSTGRES_PORT` vars, in `.env` — leaving both unset falls back to SQLite.
+
+## Deploying to Railway
+
+The app is set up to deploy as-is via Railway's `Procfile`-based build (gunicorn + WhiteNoise for static files, no separate static-hosting service needed):
+
+1. Create a new Railway project from this repo, and add a **Postgres** plugin to it — Railway wires its `DATABASE_URL` into the app service automatically.
+2. Set these environment variables on the app service:
+   - `DJANGO_SECRET_KEY` — a real, random secret (**do not** leave this unset — the fallback in `config/settings.py` is for local dev only and is committed to the repo, so it must never be used publicly).
+   - `DJANGO_DEBUG=False`
+   - `DJANGO_ALLOWED_HOSTS` — the Railway-assigned domain, e.g. `your-app.up.railway.app` (a leading dot, `.up.railway.app`, matches any subdomain if useful).
+   - `DJANGO_CSRF_TRUSTED_ORIGINS` — the same host with scheme, e.g. `https://your-app.up.railway.app` (required — without it, login and every form submission fail with a CSRF error, since Railway's proxy sits in front of the app).
+3. Deploy. The `Procfile`'s `release` phase runs `collectstatic` and `migrate` automatically on every deploy; `web` starts gunicorn.
+4. One-time, via Railway's shell (`railway run` or the dashboard's shell tab) against the deployed app:
+
+   ```sh
+   python manage.py createsuperuser
+   python manage.py load_venues page_scans/all_venues.csv
+   python manage.py shell -c "from passports.models import Season; Season.objects.create(name='2026', is_current=True)"
+   ```
+
+Email defaults to the console backend (i.e. emails aren't actually sent) unless `DJANGO_EMAIL_*` vars are set — fine for a demo.
