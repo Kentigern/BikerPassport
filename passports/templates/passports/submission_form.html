@@ -46,6 +46,7 @@
     /* Book view — echoes the physical passport's 4-column, 2-page-spread layout */
     #book-pagination { display: none; align-items: center; gap: .75rem; margin: .5rem 0; }
     #book-page-indicator { font-size: .9rem; color: #555; }
+    #book-select-all-label { display: flex; align-items: center; gap: .35rem; margin: 0; font-size: .9rem; }
     #venue-list.book-mode {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -179,6 +180,7 @@
   <input type="text" id="venue-filter" autocomplete="off" placeholder="Type a name or number">
 
   <div id="book-pagination">
+    <label id="book-select-all-label"><input type="checkbox" id="book-select-all"> Select all on this page</label>
     <button type="button" id="book-prev-btn">&larr; Prev</button>
     <span id="book-page-indicator"></span>
     <button type="button" id="book-next-btn">Next &rarr;</button>

@@ -44,6 +44,7 @@
   var prevBtn = document.getElementById('book-prev-btn');
   var nextBtn = document.getElementById('book-next-btn');
   var pageIndicator = document.getElementById('book-page-indicator');
+  var bookSelectAll = document.getElementById('book-select-all');
 
   // Pages follow the book's real section breaks (data-page-group, from
   // each venue's source page-spread) rather than a fixed 12-per-page
@@ -85,7 +86,30 @@
     pageIndicator.textContent = 'Page ' + (currentPage + 1) + ' of ' + totalPages;
     prevBtn.disabled = currentPage === 0;
     nextBtn.disabled = currentPage === totalPages - 1;
+    updateBookSelectAllState();
   }
+
+  // Reflects the current book page's checkboxes on the "select all"
+  // checkbox — checked if every venue on this page is stamped, unchecked
+  // if none are, indeterminate if it's a mix.
+  function updateBookSelectAllState() {
+    var page = pages[currentPage] || { start: 0, end: 0 };
+    var pageBoxes = venueRows.slice(page.start, page.end).map(function (row) {
+      return row.querySelector('input[type=checkbox]');
+    });
+    var checkedCount = pageBoxes.filter(function (cb) { return cb.checked; }).length;
+    bookSelectAll.checked = pageBoxes.length > 0 && checkedCount === pageBoxes.length;
+    bookSelectAll.indeterminate = checkedCount > 0 && checkedCount < pageBoxes.length;
+  }
+
+  bookSelectAll.addEventListener('change', function () {
+    var page = pages[currentPage] || { start: 0, end: 0 };
+    venueRows.slice(page.start, page.end).forEach(function (row) {
+      row.querySelector('input[type=checkbox]').checked = bookSelectAll.checked;
+    });
+    bookSelectAll.indeterminate = false;
+    updateStampSummary();
+  });
 
   prevBtn.addEventListener('click', function () {
     if (currentPage > 0) { currentPage--; renderBookPage(); }
@@ -132,7 +156,10 @@
     raffleTicketsEl.textContent = Math.min(Math.floor(checked / 10), MAX_RAFFLE_TICKETS);
   }
 
-  venueList.addEventListener('change', updateStampSummary);
+  venueList.addEventListener('change', function () {
+    updateStampSummary();
+    updateBookSelectAllState();
+  });
   updateStampSummary();
 
   // --- Bearer search-and-match (new-submission page only — an existing
