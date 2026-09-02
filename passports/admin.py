@@ -29,7 +29,7 @@ def _role_aware_admin_index(request, extra_context=None):
     if (
         request.user.is_authenticated
         and not request.user.is_superuser
-        and not request.user.groups.filter(name='Site Admin').exists()
+        and not is_site_admin(request.user)
     ):
         return redirect('landing')
     return _default_admin_index(request, extra_context)

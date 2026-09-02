@@ -47,6 +47,12 @@ class Season(models.Model):
                 name='unique_current_season',
             ),
         ]
+        permissions = [
+            (
+                'is_site_admin',
+                'Can access the dashboard, audit log, and raffle export (site admin)',
+            ),
+        ]
 
     def __str__(self):
         return self.name

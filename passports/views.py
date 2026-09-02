@@ -14,7 +14,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_POST
 
-from .access import is_bearer_verified, mark_bearer_verified
+from .access import is_bearer_verified, is_site_admin, mark_bearer_verified
 from .forms import BearerForm
 from .models import Bearer, PassportSubmission, RaffleExport, Season, Venue
 from .phone import normalize_uk_phone
@@ -60,7 +60,7 @@ def _ranked(queryset, count_attr):
 
 
 def _is_site_admin(user):
-    return user.is_superuser or user.groups.filter(name='Site Admin').exists()
+    return user.is_superuser or is_site_admin(user)
 
 
 @staff_member_required
