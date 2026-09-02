@@ -109,6 +109,15 @@
       color: #888;
       padding: 1rem 0;
     }
+    .truncation-notice {
+      background: #fffceb;
+      border: 1px solid #e0c96e;
+      border-radius: 6px;
+      padding: .6rem .9rem;
+      margin-bottom: 1rem;
+      font-size: .85rem;
+      color: #6b4e00;
+    }
     .pagination {
       display: flex;
       align-items: center;
@@ -145,6 +154,14 @@
   <button type="submit">Search</button>
   {% if q or event_type %}<a class="clear-link" href="{% url 'audit_log' %}">Clear</a>{% endif %}
 </form>
+
+{% if truncated %}
+  <p class="truncation-notice">
+    Showing only the most recent {{ events_per_source }} events for
+    {{ truncated|join:", " }} — there are older ones not shown here. Narrow
+    your search (or filter to one category) to see further back.
+  </p>
+{% endif %}
 
 <table>
   <thead>

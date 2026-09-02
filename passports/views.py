@@ -50,7 +50,11 @@ def _ranked(queryset, count_attr):
     items = list(queryset)
     max_count = getattr(items[0], count_attr) if items else 0
     return [
-        {'obj': item, 'count': getattr(item, count_attr), 'pct': round(getattr(item, count_attr) / max_count * 100)}
+        {
+            'obj': item,
+            'count': getattr(item, count_attr),
+            'pct': round(getattr(item, count_attr) / max_count * 100) if max_count else 0,
+        }
         for item in items
     ]
 
@@ -222,22 +226,38 @@ def audit_log_view(request):
 
     q = request.GET.get('q', '').strip()
     event_type = request.GET.get('type', '')
+    if event_type not in EVENT_TYPES:
+        # An unrecognized ?type= (typo'd or stale link) would otherwise
+        # silently match none of the branches below and render an empty
+        # page that reads as "no events" rather than "invalid filter" — so
+        # treat it the same as no filter at all.
+        event_type = ''
     events = []
+    # Per-source labels where the _EVENTS_PER_SOURCE cap actually cut off
+    # real rows, so the template can say so instead of the page silently
+    # implying this is the complete history.
+    truncated = []
 
     if event_type in ('', 'bearer'):
         qs = Bearer.history.select_related('history_user')
         if q:
             qs = qs.filter(Q(history_user__username__icontains=q) | Q(name__icontains=q))
-        for r in qs.order_by('-history_date')[:_EVENTS_PER_SOURCE]:
+        qs = qs.order_by('-history_date')
+        if qs.count() > _EVENTS_PER_SOURCE:
+            truncated.append(EVENT_TYPES['bearer'])
+        for r in qs[:_EVENTS_PER_SOURCE]:
             events.append(
                 _event('bearer', r.history_date, r.history_user, f"{HISTORY_LABELS[r.history_type]} — {r}")
             )
 
     if event_type in ('', 'submission'):
-        qs = PassportSubmission.history.select_related('history_user')
+        qs = PassportSubmission.history.select_related('history_user', 'bearer', 'season')
         if q:
             qs = qs.filter(Q(history_user__username__icontains=q) | Q(bearer__name__icontains=q))
-        for r in qs.order_by('-history_date')[:_EVENTS_PER_SOURCE]:
+        qs = qs.order_by('-history_date')
+        if qs.count() > _EVENTS_PER_SOURCE:
+            truncated.append(EVENT_TYPES['submission'])
+        for r in qs[:_EVENTS_PER_SOURCE]:
             events.append(
                 _event('submission', r.history_date, r.history_user, _submission_summary(r.history_type, r))
             )
@@ -249,14 +269,20 @@ def audit_log_view(request):
         ).select_related('user', 'content_type')
         if q:
             qs = qs.filter(Q(user__username__icontains=q) | Q(object_repr__icontains=q))
-        for e in qs.order_by('-action_time')[:_EVENTS_PER_SOURCE]:
+        qs = qs.order_by('-action_time')
+        if qs.count() > _EVENTS_PER_SOURCE:
+            truncated.append(EVENT_TYPES['admin'])
+        for e in qs[:_EVENTS_PER_SOURCE]:
             events.append(_event('admin', e.action_time, e.user, f"{e.object_repr} — {e.get_change_message()}"))
 
     if event_type in ('', 'raffle'):
         qs = RaffleExport.objects.select_related('season', 'generated_by')
         if q:
             qs = qs.filter(Q(generated_by__username__icontains=q) | Q(season__name__icontains=q))
-        for r in qs.order_by('-generated_at')[:_EVENTS_PER_SOURCE]:
+        qs = qs.order_by('-generated_at')
+        if qs.count() > _EVENTS_PER_SOURCE:
+            truncated.append(EVENT_TYPES['raffle'])
+        for r in qs[:_EVENTS_PER_SOURCE]:
             events.append(_event('raffle', r.generated_at, r.generated_by, f"{r.season} — {r.entry_count} tickets"))
 
     events.sort(key=lambda e: e['timestamp'], reverse=True)
@@ -266,7 +292,14 @@ def audit_log_view(request):
     return render(
         request,
         'passports/audit_log.html',
-        {'page': page, 'q': q, 'event_type': event_type, 'event_types': EVENT_TYPES},
+        {
+            'page': page,
+            'q': q,
+            'event_type': event_type,
+            'event_types': EVENT_TYPES,
+            'truncated': truncated,
+            'events_per_source': _EVENTS_PER_SOURCE,
+        },
     )
 
 
@@ -468,13 +501,20 @@ def bearer_search_view(request):
             bearers = None
 
         if bearers is not None:
+            bearers = list(bearers)
+            existing_by_bearer_id = (
+                {
+                    s.bearer_id: s
+                    for s in PassportSubmission.objects.filter(
+                        bearer__in=bearers, season=season
+                    )
+                }
+                if season and bearers
+                else {}
+            )
             for b in bearers:
                 mark_bearer_verified(request, b.pk)
-                existing = (
-                    PassportSubmission.objects.filter(bearer=b, season=season).first()
-                    if season
-                    else None
-                )
+                existing = existing_by_bearer_id.get(b.pk)
                 results.append(
                     {
                         'id': b.pk,
