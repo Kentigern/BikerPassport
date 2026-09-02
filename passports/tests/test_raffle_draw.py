@@ -33,8 +33,12 @@ def test_draw_records_winner_and_excludes_them_from_future_draws(season, venues,
     bearers = [_bearer_with_submission(season, venues, i) for i in range(3)]
     _login_to_draw_page(page, live_server, staff_user)
 
+    # The wheel itself is a fixed, decorative 24-pocket roulette wheel
+    # regardless of entrant count — only the "N entrants" label reflects
+    # who's actually eligible.
     page.wait_for_selector('#wheel-g path')
-    assert page.locator('#wheel-g path').count() == 3
+    assert page.locator('#wheel-g path').count() == 24
+    assert page.locator('#remaining-label').inner_text() == '3 entrants'
 
     page.click('#spin-btn')
     page.wait_for_selector("#reveal-overlay[style*='flex']", timeout=8000)
@@ -43,12 +47,13 @@ def test_draw_records_winner_and_excludes_them_from_future_draws(season, venues,
     winner = RaffleWinner.objects.get(season=season)
     assert winner.bearer in bearers
     assert winner.ticket_count == 2
+    assert page.locator('#remaining-label').inner_text() == '2 entrants'
 
-    # A fresh load recomputes the pool from RaffleWinner — the winner must
+    # A fresh load recomputes the count from RaffleWinner — the winner must
     # not be drawable again.
     page.reload()
     page.wait_for_selector('#wheel-g path')
-    assert page.locator('#wheel-g path').count() == 2
+    assert page.locator('#remaining-label').inner_text() == '2 entrants'
 
 
 def test_empty_pool_shows_end_state(season, venues, staff_user, page, live_server):

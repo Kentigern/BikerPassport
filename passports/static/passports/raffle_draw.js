@@ -3,7 +3,7 @@
 
   var csrfToken = document.getElementById('csrf_token').value;
   var spinUrl = document.getElementById('spin-url').value;
-  var pool = JSON.parse(document.getElementById('pool-data').textContent);
+  var remaining = parseInt(document.getElementById('pool-count').value, 10) || 0;
 
   var wheelSvg = document.getElementById('wheel');
   var wheelGroup = document.getElementById('wheel-g');
@@ -17,21 +17,21 @@
   var revealName = document.getElementById('reveal-name');
   var revealPrize = document.getElementById('reveal-prize');
   var revealTickets = document.getElementById('reveal-tickets');
+  var remainingLabel = document.getElementById('remaining-label');
 
-  var SLICE_COLORS = ['#efdaa4', '#c9b998', '#a68a5b', '#8a6b47'];
+  // Purely decorative, fixed pocket count — like a real roulette wheel,
+  // which has 37/38 pockets no matter how many people are playing. With
+  // potentially thousands of entrants, one slice per bearer would be
+  // illegible (and meaningless — a fraction-of-a-degree sliver conveys
+  // nothing) long before reaching that scale, so the wheel's pockets are
+  // completely decoupled from who's actually eligible. The real pick
+  // happens entirely server-side (raffle_draw_spin_view) before the wheel
+  // even starts spinning; this wheel is just the show.
+  var POCKET_COUNT = 24;
+  var POCKET_COLORS = ['#9e2a2b', '#2B2727']; // red / black, classic roulette
   var CX = 200, CY = 200, R = 190;
-
-  var currentSlices = []; // [{id, name, tickets, start, end}], angles in degrees, 0 = top, clockwise
+  var currentRotation = 0;
   var spinning = false;
-
-  function shuffled(arr) {
-    var copy = arr.slice();
-    for (var i = copy.length - 1; i > 0; i--) {
-      var j = Math.floor(Math.random() * (i + 1));
-      var tmp = copy[i]; copy[i] = copy[j]; copy[j] = tmp;
-    }
-    return copy;
-  }
 
   function polarPoint(angleDeg, radius) {
     var rad = (angleDeg - 90) * Math.PI / 180; // shift so 0deg = top (SVG 0deg is 3 o'clock)
@@ -46,49 +46,26 @@
   }
 
   function buildWheel() {
-    wheelGroup.innerHTML = '';
-    currentSlices = [];
+    var sweep = 360 / POCKET_COUNT;
+    for (var i = 0; i < POCKET_COUNT; i++) {
+      var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', wedgePath(i * sweep, (i + 1) * sweep));
+      path.setAttribute('fill', POCKET_COLORS[i % POCKET_COLORS.length]);
+      path.setAttribute('stroke', '#efdaa4');
+      path.setAttribute('stroke-width', '1');
+      wheelGroup.appendChild(path);
+    }
+  }
 
-    if (!pool.length) {
+  function refreshAvailability() {
+    remainingLabel.textContent = remaining + (remaining === 1 ? ' entrant' : ' entrants');
+    if (remaining <= 0) {
       stage.style.display = 'none';
       emptyState.style.display = 'block';
-      return;
+    } else {
+      stage.style.display = 'flex';
+      emptyState.style.display = 'none';
     }
-    stage.style.display = 'flex';
-    emptyState.style.display = 'none';
-
-    var arranged = shuffled(pool);
-    var total = arranged.reduce(function (sum, e) { return sum + e.tickets; }, 0);
-    var angle = 0;
-    // With a big event's worth of entrants (thousands of bearers, not just
-    // tickets), per-slice name labels are unreadable no matter the size
-    // threshold — the wheel is a pure colored spinner, and the winner's
-    // name only ever appears on the big reveal overlay after it stops.
-    // Outlining every slice also stops helping (and starts looking like a
-    // solid grid of borders) once there are hundreds of them.
-    var showStroke = arranged.length <= 150;
-
-    arranged.forEach(function (entry, i) {
-      var sweep = (entry.tickets / total) * 360;
-      var start = angle, end = angle + sweep;
-
-      var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute('d', wedgePath(start, end));
-      path.setAttribute('fill', SLICE_COLORS[i % SLICE_COLORS.length]);
-      if (showStroke) {
-        path.setAttribute('stroke', '#2B2727');
-        path.setAttribute('stroke-width', '1');
-      }
-      wheelGroup.appendChild(path);
-
-      currentSlices.push({ id: entry.id, name: entry.name, tickets: entry.tickets, start: start, end: end });
-      angle = end;
-    });
-
-    wheelSvg.style.transition = 'none';
-    wheelSvg.style.transform = 'rotate(0deg)';
-    wheelSvg.offsetHeight; // force reflow so the next transform re-enables transitions
-    wheelSvg.style.transition = '';
   }
 
   function spawnConfetti() {
@@ -136,7 +113,7 @@
   }
 
   function doSpin() {
-    if (spinning || !currentSlices.length) return;
+    if (spinning || remaining <= 0) return;
     spinning = true;
     hideReveal();
     spinBtn.disabled = true;
@@ -157,35 +134,25 @@
       }
 
       var winner = result.data.winner;
-      var slice = currentSlices.find(function (s) { return s.id === winner.id; });
-      if (!slice) {
-        // Shouldn't happen — the server and client pools should agree — but
-        // fail safe rather than animate toward nothing.
-        spinning = false;
-        spinBtn.disabled = false;
-        spinStatus.textContent = 'Winner drawn but not found on the wheel — please refresh.';
-        return;
-      }
-
-      // Land somewhere inside the winning slice, not always dead-center.
-      // The wheel is always at rotate(0deg) at the start of a spin (buildWheel
-      // resets it after every draw), so no need to account for prior rotation.
-      var margin = Math.min((slice.end - slice.start) * 0.15, 3);
-      var targetAngle = slice.start + margin + Math.random() * Math.max(slice.end - slice.start - 2 * margin, 0.01);
+      // The wheel's stopping point is purely theatrical (see POCKET_COUNT
+      // above) — the winner was already decided server-side, so just spin
+      // to somewhere unpredictable-looking and keep accumulating rotation
+      // rather than resetting between spins (large rotate() values are
+      // fine — no practical limit — and it looks more like a wheel that
+      // keeps spinning than one that silently snaps back each time).
       var extraTurns = 6 + Math.floor(Math.random() * 3);
-      var finalRotation = extraTurns * 360 + (360 - targetAngle);
-
-      wheelSvg.style.transform = 'rotate(' + finalRotation + 'deg)';
+      currentRotation += extraTurns * 360 + Math.random() * 360;
+      wheelSvg.style.transform = 'rotate(' + currentRotation + 'deg)';
 
       wheelSvg.addEventListener('transitionend', function onEnd() {
         wheelSvg.removeEventListener('transitionend', onEnd);
         showReveal(winner);
         addToWinnersList(winner);
-        pool = pool.filter(function (e) { return e.id !== winner.id; });
+        remaining -= 1;
         prizeInput.value = '';
         spinning = false;
         spinBtn.disabled = false;
-        buildWheel();
+        refreshAvailability();
       });
     }).catch(function () {
       spinning = false;
@@ -205,4 +172,5 @@
   });
 
   buildWheel();
+  refreshAvailability();
 })();

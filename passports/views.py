@@ -188,28 +188,29 @@ def _raffle_draw_pool(season):
 @staff_member_required
 def raffle_draw_view(request):
     """The live, on-screen raffle wheel — a roulette-style draw meant to be
-    projected at the event itself. One slice per still-eligible bearer,
-    sized by ticket count; drawing a winner (raffle_draw_spin_view) removes
-    them from all future draws this season. The pool is recomputed fresh
-    from RaffleWinner on every load, so refreshing mid-ceremony is always
-    safe and just resumes where the draw left off."""
+    projected at the event itself. The wheel itself is a fixed, decorative
+    set of pockets (like a real roulette wheel, which has 37/38 regardless
+    of how many people are playing) — with a big event's worth of entrants
+    potentially in the thousands, one slice per bearer would be illegible
+    anyway, so only the eligible *count* is shown, not each bearer. Drawing
+    a winner (raffle_draw_spin_view) removes them from all future draws
+    this season; the count is recomputed fresh from RaffleWinner on every
+    load, so refreshing mid-ceremony is always safe and just resumes where
+    the draw left off."""
     if not _is_site_admin(request.user):
         raise PermissionDenied
 
     season = Season.objects.current()
-    pool = []
+    pool_count = 0
     winners = []
     if season is not None:
-        pool = [
-            {'id': bearer.pk, 'name': bearer.name, 'tickets': tickets}
-            for bearer, tickets in _raffle_draw_pool(season)
-        ]
+        pool_count = len(_raffle_draw_pool(season))
         winners = RaffleWinner.objects.filter(season=season).select_related('bearer')
 
     return render(
         request,
         'passports/raffle_draw.html',
-        {'season': season, 'pool': pool, 'winners': winners},
+        {'season': season, 'pool_count': pool_count, 'winners': winners},
     )
 
 

@@ -68,6 +68,21 @@
       box-shadow: 0 0 0 .5rem #efdaa4, 0 0 40px rgba(0, 0, 0, .5);
       transition: transform 5s cubic-bezier(.15, .85, .35, 1);
     }
+    #remaining-label {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(43, 39, 39, .85);
+      color: #efdaa4;
+      padding: .6rem 1.1rem;
+      border-radius: 999px;
+      font-weight: bold;
+      font-size: 1rem;
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 2;
+    }
     #controls {
       display: flex;
       align-items: center;
@@ -203,6 +218,7 @@
     <svg id="wheel" viewBox="0 0 400 400">
       <g id="wheel-g"></g>
     </svg>
+    <div id="remaining-label"></div>
   </div>
 
   <div id="controls">
@@ -234,7 +250,7 @@
   </div>
 </div>
 
-{{ pool|json_script:"pool-data" }}
+<input type="hidden" id="pool-count" value="{{ pool_count }}">
 <input type="hidden" id="csrf_token" value="{{ csrf_token }}">
 <input type="hidden" id="spin-url" value="{% url 'raffle_draw_spin' %}">
 <script src="{% static 'passports/raffle_draw.js' %}"></script>
