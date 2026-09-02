@@ -40,6 +40,13 @@ class Season(models.Model):
 
     class Meta:
         ordering = ['-name']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['is_current'],
+                condition=models.Q(is_current=True),
+                name='unique_current_season',
+            ),
+        ]
 
     def __str__(self):
         return self.name
@@ -79,6 +86,12 @@ class Venue(models.Model):
 
     class Meta:
         ordering = ['number']
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(number__gte=1, number__lte=296),
+                name='venue_number_in_range',
+            ),
+        ]
 
     def __str__(self):
         return f"{self.number}. {self.name}"
