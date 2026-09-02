@@ -181,9 +181,9 @@ class RaffleWinnerAdmin(admin.ModelAdmin):
     of who won what is only worth anything as evidence if it can't be
     tampered with after the fact."""
 
-    list_display = ['season', 'bearer', 'prize', 'ticket_count', 'drawn_by', 'drawn_at']
+    list_display = ['season', 'bearer', 'prize', 'ticket_count', 'ticket_number', 'drawn_by', 'drawn_at']
     list_filter = ['season']
-    search_fields = ['bearer__name', 'drawn_by__username', 'prize']
+    search_fields = ['bearer__name', 'drawn_by__username', 'prize', 'ticket_number']
 
     def has_add_permission(self, request):
         return False

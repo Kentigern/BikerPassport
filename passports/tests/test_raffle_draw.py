@@ -56,6 +56,19 @@ def test_draw_records_winner_and_excludes_them_from_future_draws(season, venues,
     assert page.locator('#remaining-label').inner_text() == '2 entrants'
 
 
+def test_slot_machine_mode_reveals_matching_ticket_number(season, venues, staff_user, page, live_server):
+    _bearer_with_submission(season, venues, 0)
+    _login_to_draw_page(page, live_server, staff_user)
+
+    page.click('#view-slot-btn')
+    page.click('#spin-btn')
+    page.wait_for_selector("#reveal-overlay[style*='flex']", timeout=8000)
+
+    winner = RaffleWinner.objects.get(season=season)
+    assert len(winner.ticket_number) == 5 and winner.ticket_number.isdigit()
+    assert page.locator('#reveal-ticket-number').inner_text() == f'Ticket #{winner.ticket_number}'
+
+
 def test_empty_pool_shows_end_state(season, venues, staff_user, page, live_server):
     bearer = _bearer_with_submission(season, venues, 0)
     RaffleWinner.objects.create(season=season, bearer=bearer, ticket_count=2, drawn_by=staff_user)

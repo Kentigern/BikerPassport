@@ -282,6 +282,14 @@ class RaffleWinner(models.Model):
     ticket_count = models.PositiveIntegerField(
         help_text="Bearer's raffle ticket count at the moment they were drawn — the odds they actually had."
     )
+    ticket_number = models.CharField(
+        max_length=5,
+        blank=True,
+        default='',
+        help_text="Randomly assigned 5-digit number (09999–99999) revealed for "
+        "this draw's slot-machine animation — generated at draw time, not a "
+        "pre-printed physical ticket ID.",
+    )
     drawn_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

@@ -164,6 +164,20 @@ def raffle_export_view(request):
     return response
 
 
+def _generate_ticket_number(season):
+    """A 5-digit number (09999-99999) for this draw's slot-machine reveal —
+    generated fresh at draw time rather than pre-assigned to every ticket
+    up front, since nobody ever sees any ticket's number except the one
+    actually drawn. Retried on collision within the season purely for
+    tidy records (not fairness) — ~90,000 possible values makes exhausting
+    every retry effectively impossible."""
+    for _ in range(20):
+        candidate = f'{random.randint(9999, 99999):05d}'
+        if not RaffleWinner.objects.filter(season=season, ticket_number=candidate).exists():
+            return candidate
+    return candidate
+
+
 def _raffle_draw_pool(season):
     """Bearers still eligible for the live draw this season — one entry per
     bearer (not per ticket, unlike raffle_export_view's CSV), weighted by
@@ -237,6 +251,7 @@ def raffle_draw_spin_view(request):
 
     winner_bearer, winner_tickets = random.choices(pool, weights=[tickets for _, tickets in pool], k=1)[0]
     prize = request.POST.get('prize', '').strip()
+    ticket_number = _generate_ticket_number(season)
 
     try:
         RaffleWinner.objects.create(
@@ -244,6 +259,7 @@ def raffle_draw_spin_view(request):
             bearer=winner_bearer,
             prize=prize,
             ticket_count=winner_tickets,
+            ticket_number=ticket_number,
             drawn_by=request.user,
         )
     except IntegrityError:
@@ -258,6 +274,7 @@ def raffle_draw_spin_view(request):
                 'id': winner_bearer.pk,
                 'name': winner_bearer.name,
                 'tickets': winner_tickets,
+                'ticket_number': ticket_number,
                 'prize': prize,
             },
         }

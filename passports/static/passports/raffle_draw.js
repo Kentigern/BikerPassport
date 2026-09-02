@@ -7,6 +7,10 @@
 
   var wheelSvg = document.getElementById('wheel');
   var wheelGroup = document.getElementById('wheel-g');
+  var wheelWrap = document.getElementById('wheel-wrap');
+  var slotWrap = document.getElementById('slot-wrap');
+  var viewWheelBtn = document.getElementById('view-wheel-btn');
+  var viewSlotBtn = document.getElementById('view-slot-btn');
   var stage = document.getElementById('stage');
   var emptyState = document.getElementById('empty-state');
   var spinBtn = document.getElementById('spin-btn');
@@ -17,21 +21,44 @@
   var revealName = document.getElementById('reveal-name');
   var revealPrize = document.getElementById('reveal-prize');
   var revealTickets = document.getElementById('reveal-tickets');
+  var revealTicketNumber = document.getElementById('reveal-ticket-number');
   var remainingLabel = document.getElementById('remaining-label');
 
-  // Purely decorative, fixed pocket count — like a real roulette wheel,
-  // which has 37/38 pockets no matter how many people are playing. With
-  // potentially thousands of entrants, one slice per bearer would be
-  // illegible (and meaningless — a fraction-of-a-degree sliver conveys
-  // nothing) long before reaching that scale, so the wheel's pockets are
-  // completely decoupled from who's actually eligible. The real pick
-  // happens entirely server-side (raffle_draw_spin_view) before the wheel
-  // even starts spinning; this wheel is just the show.
+  var spinning = false;
+
+  // --- View toggle: Wheel vs Slot Machine (remembered per browser, same
+  // pattern as the intake form's List/Book view toggle) -------------------
+  var currentMode = 'wheel';
+
+  function setMode(mode) {
+    currentMode = mode;
+    var isSlot = mode === 'slot';
+    wheelWrap.style.display = isSlot ? 'none' : 'block';
+    slotWrap.style.display = isSlot ? 'flex' : 'none';
+    viewWheelBtn.classList.toggle('active', !isSlot);
+    viewSlotBtn.classList.toggle('active', isSlot);
+    try { localStorage.setItem('bikenbrew_raffle_view', mode); } catch (e) { /* ignore */ }
+  }
+
+  viewWheelBtn.addEventListener('click', function () { setMode('wheel'); });
+  viewSlotBtn.addEventListener('click', function () { setMode('slot'); });
+
+  var savedMode = 'wheel';
+  try { savedMode = localStorage.getItem('bikenbrew_raffle_view') || 'wheel'; } catch (e) { /* ignore */ }
+  setMode(savedMode);
+
+  // --- Roulette wheel — purely decorative, fixed pocket count (like a
+  // real roulette wheel, which has 37/38 pockets no matter how many people
+  // are playing). With potentially thousands of entrants, one slice per
+  // bearer would be illegible (and meaningless — a fraction-of-a-degree
+  // sliver conveys nothing) long before reaching that scale, so the
+  // wheel's pockets are completely decoupled from who's actually eligible.
+  // The real pick happens entirely server-side (raffle_draw_spin_view)
+  // before either animation even starts; both are just the show. --------
   var POCKET_COUNT = 24;
   var POCKET_COLORS = ['#9e2a2b', '#2B2727']; // red / black, classic roulette
   var CX = 200, CY = 200, R = 190;
   var currentRotation = 0;
-  var spinning = false;
 
   function polarPoint(angleDeg, radius) {
     var rad = (angleDeg - 90) * Math.PI / 180; // shift so 0deg = top (SVG 0deg is 3 o'clock)
@@ -57,6 +84,73 @@
     }
   }
 
+  function spinWheel(onDone) {
+    // The stopping point is purely theatrical (see POCKET_COUNT above) —
+    // the winner was already decided server-side, so just spin to
+    // somewhere unpredictable-looking. Rotation keeps accumulating rather
+    // than resetting between spins (large rotate() values are fine — no
+    // practical limit — and it looks more like a wheel that keeps
+    // spinning than one that silently snaps back each time).
+    var extraTurns = 6 + Math.floor(Math.random() * 3);
+    currentRotation += extraTurns * 360 + Math.random() * 360;
+    wheelSvg.style.transform = 'rotate(' + currentRotation + 'deg)';
+
+    wheelSvg.addEventListener('transitionend', function onEnd() {
+      wheelSvg.removeEventListener('transitionend', onEnd);
+      onDone();
+    });
+  }
+
+  // --- Slot machine — 5 reels, each cycling 0-9, revealing the winner's
+  // ticket number one digit at a time, left reel to right. -------------
+  var DIGIT_CYCLES = 20; // repeated 0-9 sequences built into each reel strip
+  var reelStrips = Array.prototype.slice.call(document.querySelectorAll('.reel-strip'));
+
+  reelStrips.forEach(function (strip) {
+    for (var c = 0; c < DIGIT_CYCLES; c++) {
+      for (var d = 0; d <= 9; d++) {
+        var digitEl = document.createElement('div');
+        digitEl.className = 'digit';
+        digitEl.textContent = d;
+        strip.appendChild(digitEl);
+      }
+    }
+  });
+
+  function resetReelsInstant() {
+    reelStrips.forEach(function (strip) {
+      strip.style.transition = 'none';
+      strip.style.transform = 'translateY(0)';
+    });
+    slotWrap.offsetHeight; // force reflow so the next transform re-enables transitions
+  }
+
+  function spinSlot(ticketNumber, onDone) {
+    resetReelsInstant();
+    var digitHeight = reelStrips[0].parentElement.getBoundingClientRect().height;
+    var lastIndex = reelStrips.length - 1;
+
+    reelStrips.forEach(function (strip, i) {
+      var targetDigit = parseInt(ticketNumber[i], 10);
+      var cycles = 8 + i * 2; // later reels travel further -> stop later
+      var steps = cycles * 10 + targetDigit;
+      var duration = 1.8 + i * 0.7; // seconds — staggered left-to-right stop
+
+      requestAnimationFrame(function () {
+        strip.style.transition = 'transform ' + duration + 's cubic-bezier(.15, .85, .35, 1)';
+        strip.style.transform = 'translateY(-' + (steps * digitHeight) + 'px)';
+      });
+
+      if (i === lastIndex) {
+        strip.addEventListener('transitionend', function onEnd() {
+          strip.removeEventListener('transitionend', onEnd);
+          onDone();
+        });
+      }
+    });
+  }
+
+  // --- Shared draw flow --------------------------------------------------
   function refreshAvailability() {
     remainingLabel.textContent = remaining + (remaining === 1 ? ' entrant' : ' entrants');
     if (remaining <= 0) {
@@ -88,6 +182,7 @@
     revealName.textContent = winner.name;
     revealPrize.textContent = winner.prize ? winner.prize : '';
     revealTickets.textContent = winner.tickets + (winner.tickets === 1 ? ' ticket' : ' tickets');
+    revealTicketNumber.textContent = 'Ticket #' + winner.ticket_number;
     revealOverlay.style.display = 'flex';
     spawnConfetti();
   }
@@ -100,6 +195,16 @@
     var li = document.createElement('li');
     li.textContent = winner.name + (winner.prize ? ' — ' + winner.prize : '');
     winnersList.insertBefore(li, winnersList.firstChild);
+  }
+
+  function onDrawSettled(winner) {
+    showReveal(winner);
+    addToWinnersList(winner);
+    remaining -= 1;
+    prizeInput.value = '';
+    spinning = false;
+    spinBtn.disabled = false;
+    refreshAvailability();
   }
 
   function postSpin(prize) {
@@ -134,26 +239,11 @@
       }
 
       var winner = result.data.winner;
-      // The wheel's stopping point is purely theatrical (see POCKET_COUNT
-      // above) — the winner was already decided server-side, so just spin
-      // to somewhere unpredictable-looking and keep accumulating rotation
-      // rather than resetting between spins (large rotate() values are
-      // fine — no practical limit — and it looks more like a wheel that
-      // keeps spinning than one that silently snaps back each time).
-      var extraTurns = 6 + Math.floor(Math.random() * 3);
-      currentRotation += extraTurns * 360 + Math.random() * 360;
-      wheelSvg.style.transform = 'rotate(' + currentRotation + 'deg)';
-
-      wheelSvg.addEventListener('transitionend', function onEnd() {
-        wheelSvg.removeEventListener('transitionend', onEnd);
-        showReveal(winner);
-        addToWinnersList(winner);
-        remaining -= 1;
-        prizeInput.value = '';
-        spinning = false;
-        spinBtn.disabled = false;
-        refreshAvailability();
-      });
+      if (currentMode === 'slot') {
+        spinSlot(winner.ticket_number, function () { onDrawSettled(winner); });
+      } else {
+        spinWheel(function () { onDrawSettled(winner); });
+      }
     }).catch(function () {
       spinning = false;
       spinBtn.disabled = false;

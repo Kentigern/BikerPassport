@@ -38,9 +38,34 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      /* flex-start, not center — centering oversized content isn't
+         reliably reachable by scroll (Chromium clips the "start" side
+         even with overflow-y:auto), and this page needs to keep working
+         on shorter/unusual viewports, not just a full-height projector. */
+      justify-content: flex-start;
       gap: 1.5rem;
       padding: 2rem;
+      overflow-y: auto;
+    }
+
+    .view-toggle {
+      display: flex;
+      gap: .5rem;
+    }
+    .view-toggle-btn {
+      padding: .5rem 1.1rem;
+      font-size: .9rem;
+      font-weight: bold;
+      background: #3a3535;
+      color: #c9b998;
+      border: 1px solid #665f5f;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .view-toggle-btn.active {
+      background: #efdaa4;
+      color: #2B2727;
+      border-color: #efdaa4;
     }
 
     #wheel-wrap {
@@ -69,10 +94,6 @@
       transition: transform 5s cubic-bezier(.15, .85, .35, 1);
     }
     #remaining-label {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
       background: rgba(43, 39, 39, .85);
       color: #efdaa4;
       padding: .6rem 1.1rem;
@@ -80,9 +101,51 @@
       font-weight: bold;
       font-size: 1rem;
       white-space: nowrap;
-      pointer-events: none;
-      z-index: 2;
     }
+
+    #slot-wrap {
+      display: none;
+      gap: .6rem;
+      padding: 1.5rem 2rem;
+      background: #1a1717;
+      border: .4rem solid #efdaa4;
+      border-radius: 16px;
+      box-shadow: 0 0 40px rgba(0, 0, 0, .5);
+    }
+    .reel-window {
+      position: relative;
+      width: min(11vmin, 90px);
+      height: min(15vmin, 120px);
+      overflow: hidden;
+      background: #3a3535;
+      border-radius: 8px;
+    }
+    .reel-window::before, .reel-window::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 35%;
+      z-index: 1;
+      pointer-events: none;
+    }
+    .reel-window::before { top: 0; background: linear-gradient(rgba(0, 0, 0, .6), transparent); }
+    .reel-window::after { bottom: 0; background: linear-gradient(transparent, rgba(0, 0, 0, .6)); }
+    .reel-strip {
+      display: flex;
+      flex-direction: column;
+    }
+    .reel-strip .digit {
+      height: min(15vmin, 120px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(2rem, 7vmin, 4rem);
+      font-weight: bold;
+      color: #efdaa4;
+      flex-shrink: 0;
+    }
+
     #controls {
       display: flex;
       align-items: center;
@@ -185,6 +248,11 @@
       color: #c9b998;
       margin: .75rem 0 0;
     }
+    #reveal-ticket-number {
+      font-size: clamp(.9rem, 1.6vw, 1.1rem);
+      color: #8d8484;
+      margin: .3rem 0 0;
+    }
     @keyframes reveal-pop {
       0% { transform: scale(.6); opacity: 0; }
       100% { transform: scale(1); opacity: 1; }
@@ -213,13 +281,27 @@
 <div id="season-label">{% if season %}Season: {{ season }}{% else %}No active season{% endif %}</div>
 
 <div id="stage">
+  <div class="view-toggle">
+    <button type="button" id="view-wheel-btn" class="view-toggle-btn active">Wheel</button>
+    <button type="button" id="view-slot-btn" class="view-toggle-btn">Slot Machine</button>
+  </div>
+
   <div id="wheel-wrap">
     <div id="pointer"></div>
     <svg id="wheel" viewBox="0 0 400 400">
       <g id="wheel-g"></g>
     </svg>
-    <div id="remaining-label"></div>
   </div>
+
+  <div id="slot-wrap">
+    <div class="reel-window"><div class="reel-strip"></div></div>
+    <div class="reel-window"><div class="reel-strip"></div></div>
+    <div class="reel-window"><div class="reel-strip"></div></div>
+    <div class="reel-window"><div class="reel-strip"></div></div>
+    <div class="reel-window"><div class="reel-strip"></div></div>
+  </div>
+
+  <div id="remaining-label"></div>
 
   <div id="controls">
     <input type="text" id="prize-input" placeholder="Prize (optional)" autocomplete="off">
@@ -247,6 +329,7 @@
     <p id="reveal-prize"></p>
     <h1 id="reveal-name"></h1>
     <p id="reveal-tickets"></p>
+    <p id="reveal-ticket-number"></p>
   </div>
 </div>
 
