@@ -1,0 +1,6 @@
+# Test-only deps (browser automation etc.) — not needed in production,
+# so kept out of requirements.txt / the Railway build.
+-r requirements.txt
+pytest
+pytest-django
+pytest-playwright

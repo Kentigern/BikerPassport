@@ -70,6 +70,18 @@ Internal staff tool for Make Your Mark's annual Bike + Brew fundraiser — see
 - **New submission** (`/passports/submissions/new/`, also linked from the submissions admin page and the landing page) — the fast passport-intake form: search for an existing bearer by name/phone or enter a new one, check off stamped venues, and save. The same form (`/passports/submissions/<id>/edit/`) is used to correct an existing submission. Two venue-checklist styles, toggleable per staff member (remembered via the browser's local storage): **List view** (searchable, scrolling, default) and **Book view** (a paginated 4-column grid echoing the physical passport's own page layout, including its real section breaks).
 - **Audit history** — open a Bearer or Passport submission in the admin and click **History** (top right of its page) to see every change, who made it, and when — including edits made through the intake form, not just the admin.
 
+## Running tests
+
+Browser-driven end-to-end tests (Playwright, via `pytest-playwright`) live under `passports/tests/`. They spin up a real local server (`pytest-django`'s `live_server`) and drive an actual browser against it — no separate `manage.py runserver` needed.
+
+```sh
+pip install -r requirements-dev.txt
+python -m playwright install chromium   # one-time browser download
+python -m pytest
+```
+
+Add `--headed` to watch the browser as tests run (and `--slowmo=200`, say, to slow it down enough to follow), or leave both off for a fast headless run.
+
 ## Project layout
 
 - `config/` — Django project settings/urls
