@@ -135,14 +135,9 @@
   venueList.addEventListener('change', updateStampSummary);
   updateStampSummary();
 
-  // --- Bearer search-and-match -----------------------------------------
+  // --- Bearer search-and-match (new-submission page only — an existing
+  // submission's bearer is fixed and this markup isn't rendered for it) ---
   var searchInput = document.getElementById('bearer-search');
-  var resultsBox = document.getElementById('bearer-search-results');
-  var matchNote = document.getElementById('bearer-match-note');
-  var phoneChallengeBox = document.getElementById('bearer-phone-challenge');
-  var phoneChallengeInput = document.getElementById('bearer-phone-challenge-input');
-  var phoneChallengeBtn = document.getElementById('bearer-phone-challenge-btn');
-  var phoneChallengeStatus = document.getElementById('bearer-phone-challenge-status');
   var bearerFields = {
     name: document.getElementById('id_name'),
     email: document.getElementById('id_email'),
@@ -150,98 +145,107 @@
     mailing_address: document.getElementById('id_mailing_address'),
   };
 
-  var searchTimer = null;
+  if (searchInput) {
+    var resultsBox = document.getElementById('bearer-search-results');
+    var matchNote = document.getElementById('bearer-match-note');
+    var phoneChallengeBox = document.getElementById('bearer-phone-challenge');
+    var phoneChallengeInput = document.getElementById('bearer-phone-challenge-input');
+    var phoneChallengeBtn = document.getElementById('bearer-phone-challenge-btn');
+    var phoneChallengeStatus = document.getElementById('bearer-phone-challenge-status');
 
-  searchInput.addEventListener('input', function () {
-    clearTimeout(searchTimer);
-    var q = searchInput.value.trim();
-    phoneChallengeBox.style.display = 'none';
-    if (!q) {
-      resultsBox.style.display = 'none';
-      resultsBox.innerHTML = '';
-      return;
-    }
-    searchTimer = setTimeout(function () {
-      fetch('/passports/bearers/search/?q=' + encodeURIComponent(q))
-        .then(function (r) { return r.json(); })
-        .then(function (data) { renderResults(data.results); });
-    }, 250);
-  });
+    var searchTimer = null;
 
-  function renderResults(results) {
-    resultsBox.innerHTML = '';
-    if (!results.length) {
-      resultsBox.style.display = 'none';
+    searchInput.addEventListener('input', function () {
+      clearTimeout(searchTimer);
+      var q = searchInput.value.trim();
       phoneChallengeBox.style.display = 'none';
-      return;
-    }
-
-    var anyNeedsPhone = results.some(function (b) { return b.needs_phone; });
-
-    results.forEach(function (bearer) {
-      var row = document.createElement('div');
-      if (bearer.needs_phone) {
-        row.textContent = bearer.name + ' — enter their phone number below to access this record';
-      } else {
-        var detail = [bearer.phone, bearer.email].filter(Boolean).join(' · ');
-        var text = bearer.name + (detail ? ' (' + detail + ')' : '');
-        if (bearer.submission_id) {
-          text += ' — already has a submission this season';
-        }
-        row.textContent = text;
-        row.addEventListener('click', function () { pickBearer(bearer); });
+      if (!q) {
+        resultsBox.style.display = 'none';
+        resultsBox.innerHTML = '';
+        return;
       }
-      resultsBox.appendChild(row);
+      searchTimer = setTimeout(function () {
+        fetch('/passports/bearers/search/?q=' + encodeURIComponent(q))
+          .then(function (r) { return r.json(); })
+          .then(function (data) { renderResults(data.results); });
+      }, 250);
     });
-    resultsBox.style.display = 'block';
 
-    phoneChallengeStatus.textContent = '';
-    phoneChallengeBox.style.display = anyNeedsPhone ? 'block' : 'none';
-  }
+    var renderResults = function (results) {
+      resultsBox.innerHTML = '';
+      if (!results.length) {
+        resultsBox.style.display = 'none';
+        phoneChallengeBox.style.display = 'none';
+        return;
+      }
 
-  phoneChallengeBtn.addEventListener('click', function () {
-    var phone = phoneChallengeInput.value.trim();
-    if (!phone) return;
-    fetch('/passports/bearers/search/?q=' + encodeURIComponent(phone))
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        var match = data.results.find(function (b) { return !b.needs_phone; });
-        if (match) {
-          pickBearer(match);
-          phoneChallengeBox.style.display = 'none';
-          phoneChallengeInput.value = '';
+      var anyNeedsPhone = results.some(function (b) { return b.needs_phone; });
+
+      results.forEach(function (bearer) {
+        var row = document.createElement('div');
+        if (bearer.needs_phone) {
+          row.textContent = bearer.name + ' — enter their phone number below to access this record';
         } else {
-          phoneChallengeStatus.className = 'status-error';
-          phoneChallengeStatus.textContent = 'No bearer matches that phone number.';
+          var detail = [bearer.phone, bearer.email].filter(Boolean).join(' · ');
+          var text = bearer.name + (detail ? ' (' + detail + ')' : '');
+          if (bearer.submission_id) {
+            text += ' — already has a submission this season';
+          }
+          row.textContent = text;
+          row.addEventListener('click', function () { pickBearer(bearer); });
+        }
+        resultsBox.appendChild(row);
+      });
+      resultsBox.style.display = 'block';
+
+      phoneChallengeStatus.textContent = '';
+      phoneChallengeBox.style.display = anyNeedsPhone ? 'block' : 'none';
+    };
+
+    phoneChallengeBtn.addEventListener('click', function () {
+      var phone = phoneChallengeInput.value.trim();
+      if (!phone) return;
+      fetch('/passports/bearers/search/?q=' + encodeURIComponent(phone))
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          var match = data.results.find(function (b) { return !b.needs_phone; });
+          if (match) {
+            pickBearer(match);
+            phoneChallengeBox.style.display = 'none';
+            phoneChallengeInput.value = '';
+          } else {
+            phoneChallengeStatus.className = 'status-error';
+            phoneChallengeStatus.textContent = 'No bearer matches that phone number.';
+          }
+        });
+    });
+
+    var pickBearer = function (bearer) {
+      if (bearer.submission_id) {
+        window.location = '/passports/submissions/' + bearer.submission_id + '/edit/';
+        return;
+      }
+      bearerFields.name.value = bearer.name;
+      bearerFields.email.value = bearer.email;
+      bearerFields.phone.value = bearer.phone;
+      bearerFields.mailing_address.value = bearer.mailing_address;
+      bearerIdField.value = bearer.id;
+      matchNote.textContent = 'Matched existing bearer — saving will update their record.';
+      matchNote.style.display = 'block';
+      resultsBox.style.display = 'none';
+      searchInput.value = '';
+    };
+
+    Object.keys(bearerFields).forEach(function (key) {
+      bearerFields[key].addEventListener('input', function () {
+        if (bearerIdField.value) {
+          bearerIdField.value = '';
+          matchNote.textContent = 'Details edited — this will be saved as a new bearer.';
+          matchNote.style.display = 'block';
         }
       });
-  });
-
-  function pickBearer(bearer) {
-    if (bearer.submission_id) {
-      window.location = '/passports/submissions/' + bearer.submission_id + '/edit/';
-      return;
-    }
-    bearerFields.name.value = bearer.name;
-    bearerFields.email.value = bearer.email;
-    bearerFields.phone.value = bearer.phone;
-    bearerFields.mailing_address.value = bearer.mailing_address;
-    bearerIdField.value = bearer.id;
-    matchNote.textContent = 'Matched existing bearer — saving will update their record.';
-    matchNote.style.display = 'block';
-    resultsBox.style.display = 'none';
-    searchInput.value = '';
-  }
-
-  Object.keys(bearerFields).forEach(function (key) {
-    bearerFields[key].addEventListener('input', function () {
-      if (bearerIdField.value) {
-        bearerIdField.value = '';
-        matchNote.textContent = 'Details edited — this will be saved as a new bearer.';
-        matchNote.style.display = 'block';
-      }
     });
-  });
+  }
 
   // --- Save bearer --------------------------------------------------
   var bearerSaveBtn = document.getElementById('bearer-save-btn');

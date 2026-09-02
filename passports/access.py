@@ -19,4 +19,11 @@ def mark_bearer_verified(request, bearer_id):
 def is_bearer_verified(request, bearer_id):
     if request.user.is_superuser:
         return True
-    return int(bearer_id) in request.session.get('verified_bearer_ids', [])
+    # bearer_id can come straight from a POST body (bearer_save_view,
+    # submission_save_view) — a malformed value is simply unverified, not a
+    # server error.
+    try:
+        bearer_id = int(bearer_id)
+    except (TypeError, ValueError):
+        return False
+    return bearer_id in request.session.get('verified_bearer_ids', [])

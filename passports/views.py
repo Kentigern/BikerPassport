@@ -24,6 +24,21 @@ def _permission_denied_json(message):
     return JsonResponse({'ok': False, 'errors': {'permission': [message]}}, status=403)
 
 
+def _require_perm(request, perm, message):
+    """Shared JSON-403 pattern for this app's fetch/POST API endpoints
+    (bearer_search_view, bearer_save_view, submission_save_view) — every
+    permission failure on one of those must come back as this same JSON
+    shape, never Django's HTML 403 page, so intake.js can handle every
+    endpoint's failure the same way without special-casing. Full-page views
+    (dashboard_view, raffle_export_view, audit_log_view) intentionally keep
+    raising PermissionDenied instead — a plain browser navigation should get
+    Django's normal HTML 403 page, not JSON. Returns the response to return
+    if the permission is missing, or None if the caller may proceed."""
+    if not request.user.has_perm(perm):
+        return _permission_denied_json(message)
+    return None
+
+
 @staff_member_required
 def landing_view(request):
     return render(request, 'passports/landing.html')
@@ -290,12 +305,16 @@ def bearer_save_view(request):
     bearer_id = request.POST.get('bearer_id') or None
 
     if bearer_id is None:
-        if not request.user.has_perm('passports.add_bearer'):
-            return _permission_denied_json('You do not have permission to add bearers.')
+        denied = _require_perm(request, 'passports.add_bearer', 'You do not have permission to add bearers.')
+        if denied:
+            return denied
         instance = None
     else:
-        if not request.user.has_perm('passports.change_bearer'):
-            return _permission_denied_json('You do not have permission to change bearers.')
+        denied = _require_perm(
+            request, 'passports.change_bearer', 'You do not have permission to change bearers.'
+        )
+        if denied:
+            return denied
         if not is_bearer_verified(request, bearer_id):
             return _permission_denied_json('Search for this bearer by phone first.')
         instance = get_object_or_404(Bearer, pk=bearer_id)
@@ -331,12 +350,28 @@ def submission_save_view(request):
     bearer = get_object_or_404(Bearer, pk=bearer_id)
 
     submission_id = request.POST.get('submission_id') or None
+    existing_submission = None
     if submission_id:
-        if not request.user.has_perm('passports.change_passportsubmission'):
-            return _permission_denied_json('You do not have permission to change submissions.')
+        denied = _require_perm(
+            request, 'passports.change_passportsubmission', 'You do not have permission to change submissions.'
+        )
+        if denied:
+            return denied
+        existing_submission = get_object_or_404(PassportSubmission, pk=submission_id)
+        if not is_bearer_verified(request, existing_submission.bearer_id):
+            return _permission_denied_json('Search for this bearer by phone first.')
+        # A submission's bearer is immutable once created (same rule the raw
+        # admin enforces via readonly_fields — see admin.py) — reassigning
+        # would let a verified-but-unrelated bearer's stamps/tickets be
+        # overwritten onto someone else's record.
+        if int(bearer_id) != existing_submission.bearer_id:
+            return _permission_denied_json("A submission's bearer cannot be changed.")
     else:
-        if not request.user.has_perm('passports.add_passportsubmission'):
-            return _permission_denied_json('You do not have permission to add submissions.')
+        denied = _require_perm(
+            request, 'passports.add_passportsubmission', 'You do not have permission to add submissions.'
+        )
+        if denied:
+            return denied
 
     venues = Venue.objects.filter(pk__in=request.POST.getlist('venues_stamped'), is_active=True)
     date_received = parse_date(request.POST.get('date_received', '')) or timezone.localdate()
@@ -346,12 +381,12 @@ def submission_save_view(request):
 
     try:
         if submission_id:
-            submission = get_object_or_404(PassportSubmission, pk=submission_id)
-            submission.bearer = bearer
-            submission.date_received = date_received
-            submission.notes = notes
-            submission.save()
-            submission.venues_stamped.set(venues)
+            submission = existing_submission
+            with transaction.atomic():
+                submission.date_received = date_received
+                submission.notes = notes
+                submission.save()
+                submission.venues_stamped.set(venues)
         else:
             season = Season.objects.current()
             if season is None:
@@ -366,10 +401,11 @@ def submission_save_view(request):
             existing = PassportSubmission.objects.filter(bearer=bearer, season=season).first()
             if existing:
                 matched_existing = True
-                existing.date_received = date_received
-                existing.notes = notes
-                existing.save()
-                existing.venues_stamped.set(venues)
+                with transaction.atomic():
+                    existing.date_received = date_received
+                    existing.notes = notes
+                    existing.save()
+                    existing.venues_stamped.set(venues)
                 submission = existing
             else:
                 with transaction.atomic():
@@ -414,8 +450,9 @@ def bearer_search_view(request):
     charity's ask): searching by phone reveals full details, searching by
     name only confirms a match exists and prompts for the phone number.
     Superusers bypass this and get full details either way (§5.2)."""
-    if not request.user.has_perm('passports.view_bearer'):
-        return _permission_denied_json('You do not have permission to view bearers.')
+    denied = _require_perm(request, 'passports.view_bearer', 'You do not have permission to view bearers.')
+    if denied:
+        return denied
 
     q = request.GET.get('q', '').strip()
     results = []
