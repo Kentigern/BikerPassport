@@ -90,6 +90,7 @@ The app is set up to deploy as-is via Railway's `Procfile`-based build (gunicorn
    - `DJANGO_DEBUG=False`
    - `DJANGO_ALLOWED_HOSTS` — the Railway-assigned domain, e.g. `your-app.up.railway.app` (a leading dot, `.up.railway.app`, matches any subdomain if useful).
    - `DJANGO_CSRF_TRUSTED_ORIGINS` — the same host with scheme, e.g. `https://your-app.up.railway.app` (required — without it, login and every form submission fail with a CSRF error, since Railway's proxy sits in front of the app).
+   - `DJANGO_SECURE_HSTS_SECONDS` (optional) — defaults to `3600` once `DJANGO_DEBUG=False`. Raise it (eventually to `31536000`, one year) only after confirming HTTPS works reliably on every domain in use — browsers cache this and getting it wrong locks visitors out until it expires.
 3. Deploy. The `Procfile`'s `release` phase runs `collectstatic` and `migrate` automatically on every deploy; `web` starts gunicorn.
 4. One-time, via Railway's shell (`railway run` or the dashboard's shell tab) against the deployed app:
 

@@ -60,6 +60,16 @@ CSRF_TRUSTED_ORIGINS = [
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 
+# HSTS tells browsers to only ever contact this host over HTTPS, cached for
+# the given number of seconds — get it wrong (e.g. on a domain that isn't
+# reliably HTTPS yet) and visitors are locked out until it expires, so start
+# low and only raise it once HTTPS is confirmed solid on every domain in
+# use, eventually to the usual one year (31536000) with subdomains/preload
+# if desired.
+SECURE_HSTS_SECONDS = int(os.environ.get('DJANGO_SECURE_HSTS_SECONDS', '3600')) if not DEBUG else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get('DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS', 'False') == 'True'
+SECURE_HSTS_PRELOAD = os.environ.get('DJANGO_SECURE_HSTS_PRELOAD', 'False') == 'True'
+
 
 # Application definition
 
