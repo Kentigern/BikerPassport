@@ -16,7 +16,7 @@ from django.views.decorators.http import require_POST
 
 from .access import is_bearer_verified, is_site_admin, mark_bearer_verified
 from .forms import BearerForm
-from .models import Bearer, PassportSubmission, RaffleExport, Season, Venue
+from .models import Bearer, PassportSubmission, RaffleExport, RaffleWinner, Season, Venue
 from .phone import normalize_uk_phone
 
 
@@ -164,6 +164,105 @@ def raffle_export_view(request):
     return response
 
 
+def _raffle_draw_pool(season):
+    """Bearers still eligible for the live draw this season — one entry per
+    bearer (not per ticket, unlike raffle_export_view's CSV), weighted by
+    their ticket count, excluding anyone RaffleWinner already recorded as
+    having won. Same annotate-based ticket count as raffle_export_view,
+    to avoid an N+1 of per-submission .raffle_tickets property calls."""
+    already_won = RaffleWinner.objects.filter(season=season).values_list('bearer_id', flat=True)
+    submissions = (
+        PassportSubmission.objects.filter(season=season)
+        .exclude(bearer_id__in=already_won)
+        .select_related('bearer')
+        .annotate(stamp_total=Count('venues_stamped'))
+    )
+    pool = []
+    for s in submissions:
+        tickets = min(s.stamp_total // 10, PassportSubmission.MAX_RAFFLE_TICKETS)
+        if tickets > 0:
+            pool.append((s.bearer, tickets))
+    return pool
+
+
+@staff_member_required
+def raffle_draw_view(request):
+    """The live, on-screen raffle wheel — a roulette-style draw meant to be
+    projected at the event itself. One slice per still-eligible bearer,
+    sized by ticket count; drawing a winner (raffle_draw_spin_view) removes
+    them from all future draws this season. The pool is recomputed fresh
+    from RaffleWinner on every load, so refreshing mid-ceremony is always
+    safe and just resumes where the draw left off."""
+    if not _is_site_admin(request.user):
+        raise PermissionDenied
+
+    season = Season.objects.current()
+    pool = []
+    winners = []
+    if season is not None:
+        pool = [
+            {'id': bearer.pk, 'name': bearer.name, 'tickets': tickets}
+            for bearer, tickets in _raffle_draw_pool(season)
+        ]
+        winners = RaffleWinner.objects.filter(season=season).select_related('bearer')
+
+    return render(
+        request,
+        'passports/raffle_draw.html',
+        {'season': season, 'pool': pool, 'winners': winners},
+    )
+
+
+@staff_member_required
+@require_POST
+def raffle_draw_spin_view(request):
+    """Picks the winner server-side (weighted-random over each still-
+    eligible bearer's ticket count) the instant this is called — the
+    browser only animates a spin that lands on whichever slice this
+    already chose, so the pick itself can't be influenced client-side.
+    JSON-403 on failure, matching this app's other fetch-driven endpoints
+    (bearer_search_view/bearer_save_view/submission_save_view) rather than
+    the HTML PermissionDenied the full-page raffle views use."""
+    if not _is_site_admin(request.user):
+        return _permission_denied_json('You do not have permission to run the raffle draw.')
+
+    season = Season.objects.current()
+    if season is None:
+        return JsonResponse({'ok': False, 'errors': {'season': ['No season exists yet.']}}, status=400)
+
+    pool = _raffle_draw_pool(season)
+    if not pool:
+        return JsonResponse({'ok': False, 'errors': {'pool': ['No eligible entrants left.']}}, status=400)
+
+    winner_bearer, winner_tickets = random.choices(pool, weights=[tickets for _, tickets in pool], k=1)[0]
+    prize = request.POST.get('prize', '').strip()
+
+    try:
+        RaffleWinner.objects.create(
+            season=season,
+            bearer=winner_bearer,
+            prize=prize,
+            ticket_count=winner_tickets,
+            drawn_by=request.user,
+        )
+    except IntegrityError:
+        return JsonResponse(
+            {'ok': False, 'errors': {'bearer': ['Already won this season.']}}, status=400
+        )
+
+    return JsonResponse(
+        {
+            'ok': True,
+            'winner': {
+                'id': winner_bearer.pk,
+                'name': winner_bearer.name,
+                'tickets': winner_tickets,
+                'prize': prize,
+            },
+        }
+    )
+
+
 HISTORY_LABELS = {'+': 'Created', '~': 'Updated', '-': 'Deleted'}
 
 # Order controls the "All" dropdown's display order in the template too.
@@ -172,6 +271,7 @@ EVENT_TYPES = {
     'submission': 'Submission',
     'admin': 'User/Site Admin',
     'raffle': 'Raffle export',
+    'raffle_winner': 'Raffle winner',
 }
 
 # Bounded per-source, applied after any search filter — cheap and correct
@@ -284,6 +384,26 @@ def audit_log_view(request):
             truncated.append(EVENT_TYPES['raffle'])
         for r in qs[:_EVENTS_PER_SOURCE]:
             events.append(_event('raffle', r.generated_at, r.generated_by, f"{r.season} — {r.entry_count} tickets"))
+
+    if event_type in ('', 'raffle_winner'):
+        qs = RaffleWinner.objects.select_related('season', 'bearer', 'drawn_by')
+        if q:
+            qs = qs.filter(
+                Q(drawn_by__username__icontains=q) | Q(bearer__name__icontains=q) | Q(season__name__icontains=q)
+            )
+        qs = qs.order_by('-drawn_at')
+        if qs.count() > _EVENTS_PER_SOURCE:
+            truncated.append(EVENT_TYPES['raffle_winner'])
+        for r in qs[:_EVENTS_PER_SOURCE]:
+            prize_part = f' — {r.prize}' if r.prize else ''
+            events.append(
+                _event(
+                    'raffle_winner',
+                    r.drawn_at,
+                    r.drawn_by,
+                    f'{r.season} — {r.bearer}{prize_part} ({r.ticket_count} tickets)',
+                )
+            )
 
     events.sort(key=lambda e: e['timestamp'], reverse=True)
 

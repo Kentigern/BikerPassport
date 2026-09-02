@@ -3,7 +3,7 @@ from django.shortcuts import redirect
 from simple_history.admin import SimpleHistoryAdmin
 
 from .access import is_bearer_verified, mark_bearer_verified
-from .models import Bearer, PassportSubmission, RaffleExport, Season, Venue
+from .models import Bearer, PassportSubmission, RaffleExport, RaffleWinner, Season, Venue
 from .phone import normalize_uk_phone
 
 admin.site.site_header = "MARK Passport Administration"
@@ -164,6 +164,26 @@ class RaffleExportAdmin(admin.ModelAdmin):
     list_display = ['season', 'generated_by', 'generated_at', 'entry_count']
     list_filter = ['season']
     search_fields = ['generated_by__username', 'season__name']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(RaffleWinner)
+class RaffleWinnerAdmin(admin.ModelAdmin):
+    """Read-only, full stop — same rationale as RaffleExportAdmin: a record
+    of who won what is only worth anything as evidence if it can't be
+    tampered with after the fact."""
+
+    list_display = ['season', 'bearer', 'prize', 'ticket_count', 'drawn_by', 'drawn_at']
+    list_filter = ['season']
+    search_fields = ['bearer__name', 'drawn_by__username', 'prize']
 
     def has_add_permission(self, request):
         return False

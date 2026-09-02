@@ -262,3 +262,39 @@ class RaffleExport(models.Model):
 
     def __str__(self):
         return f"{self.season} — {self.entry_count} entries by {self.generated_by} at {self.generated_at:%Y-%m-%d %H:%M}"
+
+
+class RaffleWinner(models.Model):
+    """Immutable record of a winner drawn live on the raffle wheel
+    (views.raffle_draw_view) — same rationale as RaffleExport: real prizes
+    are on the line, so who won what, when, and drawn by whom must be
+    tamper-proof after the fact. Unique per (season, bearer) — once drawn,
+    a bearer's remaining tickets are out of the running for the rest of
+    the season, enforced here at the DB level too."""
+
+    season = models.ForeignKey(Season, on_delete=models.PROTECT, related_name='raffle_winners')
+    bearer = models.ForeignKey(Bearer, on_delete=models.PROTECT, related_name='raffle_wins')
+    prize = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Optional label the host can type in before drawing, e.g. 'Weekend for two'.",
+    )
+    ticket_count = models.PositiveIntegerField(
+        help_text="Bearer's raffle ticket count at the moment they were drawn — the odds they actually had."
+    )
+    drawn_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='raffle_winners_drawn',
+    )
+    drawn_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-drawn_at']
+        constraints = [
+            models.UniqueConstraint(fields=['season', 'bearer'], name='unique_winner_per_season'),
+        ]
+
+    def __str__(self):
+        return f"{self.bearer} — {self.season} — drawn {self.drawn_at:%Y-%m-%d %H:%M}"
