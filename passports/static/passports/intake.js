@@ -293,6 +293,8 @@
         bearerSaveStatus.className = 'status-ok';
         bearerSaveStatus.textContent = 'Bearer saved.';
         venueSaveButtons.forEach(function (btn) { btn.disabled = false; });
+        venueList.querySelectorAll('input[type=checkbox]').forEach(function (cb) { cb.disabled = false; });
+        bookSelectAll.disabled = false;
       } else {
         var messages = [];
         Object.keys(result.data.errors || {}).forEach(function (field) {

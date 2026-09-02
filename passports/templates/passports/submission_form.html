@@ -47,6 +47,11 @@
     #book-pagination { display: none; align-items: center; gap: .75rem; margin: .5rem 0; }
     #book-page-indicator { font-size: .9rem; color: #555; }
     #book-select-all-label { display: flex; align-items: center; gap: .35rem; margin: 0; font-size: .8rem; font-weight: bold; }
+    /* A partially-checked page and a fully-checked page both render as "a
+       blue box with a white mark" by default — too similar at a glance.
+       Recolor the partial (indeterminate) state so it reads unambiguously
+       as "not done yet". */
+    #book-select-all:indeterminate { accent-color: #c9960b; }
     #venue-list.book-mode {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -180,7 +185,7 @@
   <input type="text" id="venue-filter" autocomplete="off" placeholder="Type a name or number">
 
   <div id="book-pagination">
-    <label id="book-select-all-label"><input type="checkbox" id="book-select-all"> Select all on this page</label>
+    <label id="book-select-all-label"><input type="checkbox" id="book-select-all" {% if not submission %}disabled{% endif %}> Select all on this page</label>
     <button type="button" id="book-prev-btn">&larr; Prev</button>
     <span id="book-page-indicator"></span>
     <button type="button" id="book-next-btn">Next &rarr;</button>
@@ -189,7 +194,7 @@
   <div id="venue-list">
     {% for venue in venues %}
       <label class="venue-row" data-search="{{ venue.number }} {{ venue.name|lower }}" data-page-group="{{ venue.page_group }}">
-        <input type="checkbox" value="{{ venue.pk }}" {% if venue.pk in checked_ids %}checked{% endif %}>
+        <input type="checkbox" value="{{ venue.pk }}" {% if venue.pk in checked_ids %}checked{% endif %} {% if not submission %}disabled{% endif %}>
         <span class="venue-badge">{{ venue.number }}</span><span class="venue-name">{{ venue.name }}</span>
       </label>
     {% endfor %}
