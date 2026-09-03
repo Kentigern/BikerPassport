@@ -50,7 +50,8 @@
 
     /* List view (default) */
     #venue-list { max-height: 420px; overflow-y: auto; border: 1px solid #ddd; padding: .5rem; }
-    .venue-row { display: block; font-size: .9rem; padding: .15rem 0; }
+    .venue-row { display: flex; align-items: center; gap: .4rem; min-height: 44px; font-size: .9rem; padding: .4rem .3rem; }
+    .venue-row input[type=checkbox] { width: 1.3rem; height: 1.3rem; flex-shrink: 0; }
     .venue-badge { font-weight: bold; margin-right: .3em; }
     .venue-badge::after { content: "."; }
     .venue-name { }
@@ -161,7 +162,7 @@
   {% endfor %}
 
   <button type="button" id="bearer-save-btn">Save bearer</button>
-  <p id="bearer-save-status"></p>
+  <p id="bearer-save-status" aria-live="polite"></p>
 </fieldset>
 
 <fieldset>
@@ -187,7 +188,7 @@
   <div class="venue-toolbar">
     <button type="button" class="venue-save-btn" data-exit="false" {% if not submission %}disabled{% endif %}>Save</button>
     <button type="button" class="venue-save-btn" data-exit="true" {% if not submission %}disabled{% endif %}>Save &amp; Exit</button>
-    <p class="venue-save-status"></p>
+    <p class="venue-save-status" aria-live="polite"></p>
   </div>
 
   <div class="view-toggle">
@@ -217,7 +218,7 @@
   <div class="venue-toolbar">
     <button type="button" class="venue-save-btn" data-exit="false" {% if not submission %}disabled{% endif %}>Save</button>
     <button type="button" class="venue-save-btn" data-exit="true" {% if not submission %}disabled{% endif %}>Save &amp; Exit</button>
-    <p class="venue-save-status"></p>
+    <p class="venue-save-status" aria-live="polite"></p>
     <p class="corner-snip-note">Once saved, remember to snip a corner off the passport before returning it to the bearer — this is how we avoid the same passport being counted twice.</p>
   </div>
 </fieldset>
