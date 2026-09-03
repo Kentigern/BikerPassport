@@ -7,6 +7,17 @@
   <link rel="icon" href="https://makeyourmark.co.uk/wp-content/uploads/2025/08/MARK-Favicon-100x100.png">
   <style>
     * { box-sizing: border-box; }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
     html, body {
       margin: 0;
       height: 100%;
@@ -220,7 +231,7 @@
       display: none;
       text-align: center;
     }
-    #empty-state h1 {
+    .empty-state-text {
       font-size: clamp(2rem, 6vw, 4rem);
       margin: 0;
     }
@@ -283,6 +294,7 @@
 </head>
 <body>
 
+<h1 class="sr-only">Raffle Draw</h1>
 <a class="back-link" href="{% url dashboard_url_name %}">&larr; Back to Dashboard</a>
 <div id="season-label">{% if season %}Season: {{ season }}{% else %}No active season{% endif %}</div>
 
@@ -318,7 +330,7 @@
 </div>
 
 <div id="empty-state">
-  <h1>🏁 All prizes have been drawn! 🏁</h1>
+  <p class="empty-state-text">🏁 All prizes have been drawn! 🏁</p>
 </div>
 
 <div id="winners-panel">
@@ -333,7 +345,7 @@
 <div id="reveal-overlay">
   <div id="reveal-card">
     <p id="reveal-prize"></p>
-    <h1 id="reveal-name"></h1>
+    <p id="reveal-name"></p>
     <p id="reveal-tickets"></p>
     <p id="reveal-ticket-number"></p>
   </div>
