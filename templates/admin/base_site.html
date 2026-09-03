@@ -40,3 +40,14 @@
   }
 </style>
 {% endblock %}
+
+{% block nav-global %}
+{% if dashboard_url_name and request.resolver_match.url_name != 'index' %}
+<div style="padding: .6rem 2rem; background: #1f1c1c;">
+  <a href="{% url dashboard_url_name %}"
+     style="display: inline-block; padding: .5rem 1rem; border: 1px solid #efdaa4;
+            border-radius: 8px; color: #efdaa4; font-weight: bold; text-decoration: none;
+            font-size: .9rem;">&larr; Back to Dashboard</a>
+</div>
+{% endif %}
+{% endblock %}
