@@ -253,6 +253,13 @@
 
   spinBtn.addEventListener('click', doSpin);
 
+  // The reveal overlay covers the whole screen (including the Back to
+  // Dashboard link and the draw controls underneath it) and previously only
+  // closed when the next draw started — leaving no way to navigate away or
+  // click anything while a winner's name was on screen. Clicking anywhere
+  // on it dismisses it, same as any other full-screen reveal/modal.
+  revealOverlay.addEventListener('click', hideReveal);
+
   document.addEventListener('keydown', function (e) {
     if (document.activeElement === prizeInput) return;
     if (e.code === 'Space' || e.code === 'Enter') {
