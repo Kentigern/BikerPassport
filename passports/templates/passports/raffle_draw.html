@@ -19,11 +19,17 @@
       position: fixed;
       top: 1rem;
       left: 1.2rem;
-      color: #c9b998;
-      font-size: .9rem;
+      padding: .6rem 1.2rem;
+      background: transparent;
+      border: 1px solid #efdaa4;
+      color: #efdaa4;
+      font-size: .95rem;
+      font-weight: bold;
       text-decoration: none;
+      border-radius: 8px;
       z-index: 5;
     }
+    .back-link:hover { background: rgba(239, 218, 164, .12); }
     #season-label {
       position: fixed;
       top: 1rem;
@@ -277,7 +283,7 @@
 </head>
 <body>
 
-<a class="back-link" href="{% url 'dashboard' %}">&larr; Dashboard</a>
+<a class="back-link" href="{% url dashboard_url_name %}">&larr; Back to Dashboard</a>
 <div id="season-label">{% if season %}Season: {{ season }}{% else %}No active season{% endif %}</div>
 
 <div id="stage">
