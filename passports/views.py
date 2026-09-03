@@ -1,5 +1,6 @@
 import csv
 import random
+import threading
 
 from django.contrib.admin.models import LogEntry
 from django.contrib.admin.views.decorators import staff_member_required
@@ -8,16 +9,35 @@ from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.models import Count, Max, Q
-from django.http import HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.http import Http404, HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.dateparse import parse_date
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.http import require_POST
 
 from .access import is_bearer_verified, is_site_admin, mark_bearer_verified
+from .emailing import qualifying_bearers, send_campaign, snapshot_recipients
 from .forms import BearerForm
-from .models import Bearer, PassportSubmission, RaffleExport, RaffleWinner, Season, Venue
+from .models import (
+    Bearer,
+    ConsentStatus,
+    EmailCampaign,
+    EmailCampaignRecipient,
+    PassportSubmission,
+    RaffleExport,
+    RaffleWinner,
+    Season,
+    Venue,
+)
 from .phone import normalize_uk_phone
+
+# Guards against double-starting a background send for the same campaign
+# within one running process (e.g. a double form-submit) — see
+# passports/emailing.py's module docstring for why this isn't a real
+# task queue yet. A process restart clears this naturally; resuming a
+# stalled send afterwards is just calling send_campaign again.
+_SENDING_CAMPAIGN_IDS = set()
 
 
 def _permission_denied_json(message):
@@ -290,6 +310,7 @@ EVENT_TYPES = {
     'admin': 'User/Site Admin',
     'raffle': 'Raffle export',
     'raffle_winner': 'Raffle winner',
+    'bulk_email': 'Bulk email',
 }
 
 # Bounded per-source, applied after any search filter — cheap and correct
@@ -420,6 +441,23 @@ def audit_log_view(request):
                     r.drawn_at,
                     r.drawn_by,
                     f'{r.season} — {r.bearer}{prize_part} ({r.ticket_count} tickets)',
+                )
+            )
+
+    if event_type in ('', 'bulk_email'):
+        qs = EmailCampaign.objects.filter(status=EmailCampaign.Status.SENT).select_related('created_by')
+        if q:
+            qs = qs.filter(Q(created_by__username__icontains=q) | Q(subject__icontains=q))
+        qs = qs.order_by('-sent_at')
+        if qs.count() > _EVENTS_PER_SOURCE:
+            truncated.append(EVENT_TYPES['bulk_email'])
+        for c in qs[:_EVENTS_PER_SOURCE]:
+            events.append(
+                _event(
+                    'bulk_email',
+                    c.sent_at,
+                    c.created_by,
+                    f'{c.subject} ({c.get_purpose_display()}) — {c.sent_count} sent, {c.failed_count} failed',
                 )
             )
 
@@ -669,3 +707,164 @@ def bearer_search_view(request):
                 results.append({'name': b.name, 'needs_phone': True})
 
     return JsonResponse({'results': results})
+
+
+@staff_member_required
+def email_campaign_list_view(request):
+    if not _is_site_admin(request.user):
+        raise PermissionDenied
+
+    campaigns = EmailCampaign.objects.select_related('created_by')
+    return render(request, 'passports/email_list.html', {'campaigns': campaigns})
+
+
+@staff_member_required
+def email_campaign_form_view(request, pk=None):
+    if not _is_site_admin(request.user):
+        raise PermissionDenied
+
+    campaign = get_object_or_404(EmailCampaign, pk=pk) if pk else None
+    if campaign and campaign.status != EmailCampaign.Status.DRAFT:
+        # A sent (or sending) campaign is a locked record, same spirit as
+        # RaffleExport/RaffleWinner — editing content someone already
+        # received, after the fact, isn't something the UI should allow.
+        raise PermissionDenied
+
+    if request.method == 'POST':
+        subject = request.POST.get('subject', '').strip()
+        body_html = request.POST.get('body_html', '')
+        purpose = request.POST.get('purpose', '')
+
+        errors = {}
+        if not subject:
+            errors['subject'] = ['Subject is required.']
+        if purpose not in EmailCampaign.Purpose.values:
+            errors['purpose'] = ['Choose a purpose.']
+
+        if errors:
+            return JsonResponse({'ok': False, 'errors': errors}, status=400)
+
+        if campaign is None:
+            campaign = EmailCampaign.objects.create(
+                subject=subject, body_html=body_html, purpose=purpose, created_by=request.user
+            )
+        else:
+            campaign.subject = subject
+            campaign.body_html = body_html
+            campaign.purpose = purpose
+            campaign.save(update_fields=['subject', 'body_html', 'purpose', 'updated_at'])
+
+        return JsonResponse({'ok': True, 'campaign_id': campaign.pk})
+
+    return render(
+        request,
+        'passports/email_form.html',
+        {
+            'campaign': campaign,
+            'purposes': EmailCampaign.Purpose.choices,
+        },
+    )
+
+
+@staff_member_required
+def email_campaign_recipient_count_view(request):
+    """Backs the compose page's live "N recipients" readout as the admin
+    changes purpose — same qualifying_bearers() the actual send snapshots
+    from, so the number shown is never out of step with reality."""
+    if not _is_site_admin(request.user):
+        raise PermissionDenied
+
+    purpose = request.GET.get('purpose', '')
+    if purpose not in EmailCampaign.Purpose.values:
+        return JsonResponse({'count': 0})
+    return JsonResponse({'count': qualifying_bearers(purpose).count()})
+
+
+@staff_member_required
+@xframe_options_sameorigin
+def email_campaign_preview_view(request, pk):
+    if not _is_site_admin(request.user):
+        raise PermissionDenied
+
+    campaign = get_object_or_404(EmailCampaign, pk=pk)
+    return render(
+        request,
+        'passports/email_frame.html',
+        # No specific bearer to build a real unsubscribe link for here —
+        # everything else in the frame (branding, body) matches the real
+        # send exactly; only this one link is a placeholder.
+        {'body_html': campaign.body_html, 'unsubscribe_url': '#'},
+    )
+
+
+@staff_member_required
+@require_POST
+def email_campaign_send_view(request, pk):
+    if not _is_site_admin(request.user):
+        raise PermissionDenied
+
+    campaign = get_object_or_404(EmailCampaign, pk=pk)
+    if campaign.status == EmailCampaign.Status.DRAFT:
+        snapshot_recipients(campaign)
+        campaign.status = EmailCampaign.Status.SENDING
+        campaign.save(update_fields=['status'])
+
+    if campaign.pk not in _SENDING_CAMPAIGN_IDS:
+        _SENDING_CAMPAIGN_IDS.add(campaign.pk)
+
+        def _run():
+            try:
+                send_campaign(campaign.pk)
+            finally:
+                _SENDING_CAMPAIGN_IDS.discard(campaign.pk)
+
+        threading.Thread(target=_run, daemon=True).start()
+
+    return redirect('email_campaign_status', pk=campaign.pk)
+
+
+@staff_member_required
+def email_campaign_status_view(request, pk):
+    if not _is_site_admin(request.user):
+        raise PermissionDenied
+
+    campaign = get_object_or_404(EmailCampaign, pk=pk)
+    return render(request, 'passports/email_status.html', {'campaign': campaign})
+
+
+@staff_member_required
+def email_campaign_status_json_view(request, pk):
+    if not _is_site_admin(request.user):
+        raise PermissionDenied
+
+    campaign = get_object_or_404(EmailCampaign, pk=pk)
+    return JsonResponse(
+        {
+            'status': campaign.status,
+            'recipient_count': campaign.recipient_count,
+            'sent_count': campaign.sent_count,
+            'failed_count': campaign.failed_count,
+            'pending_count': campaign.recipients.filter(
+                status=EmailCampaignRecipient.Status.PENDING
+            ).count(),
+        }
+    )
+
+
+def email_unsubscribe_view(request, token, purpose):
+    """No-login, unauthenticated — reached from a link in the email
+    itself, not the admin app. Scoped to declining only (§5.6's full
+    opt-in consent-request flow is separate, not-yet-built work)."""
+    if purpose not in EmailCampaign.Purpose.values:
+        raise Http404
+
+    bearer = get_object_or_404(Bearer, consent_token=token)
+    field = 'next_season_consent_status' if purpose == EmailCampaign.Purpose.NEXT_SEASON else 'marketing_consent_status'
+    responded_field = f'{field.removesuffix("_status")}_responded_at'
+
+    setattr(bearer, field, ConsentStatus.DECLINED)
+    setattr(bearer, responded_field, timezone.now())
+    bearer.save(update_fields=[field, responded_field])
+
+    purpose_label = dict(EmailCampaign.Purpose.choices)[purpose]
+    return render(request, 'passports/unsubscribe_confirm.html', {'purpose_label': purpose_label})

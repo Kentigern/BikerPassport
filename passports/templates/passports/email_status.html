@@ -1,0 +1,56 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ campaign.subject }} — MARK Passport Administration</title>
+  <link rel="icon" href="https://makeyourmark.co.uk/wp-content/uploads/2025/08/MARK-Favicon-100x100.png">
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem auto; max-width: 700px; color: #222; }
+    h1 { font-size: 1.4rem; }
+    .dashboard-back {
+      display: inline-block;
+      margin-bottom: 1.5rem;
+      padding: .6rem 1.2rem;
+      background: #2B2727;
+      color: #efdaa4;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: .95rem;
+      border-radius: 8px;
+    }
+    .dashboard-back:hover { background: #3d3838; }
+    .subtitle { color: #666; }
+    .progress-wrap { background: #f0ece2; border-radius: 6px; overflow: hidden; height: 1.8rem; margin: 1rem 0 .5rem; }
+    .progress-bar { background: #efdaa4; height: 100%; width: 0%; transition: width .3s; }
+    #counts { font-size: .95rem; }
+    #status-label { font-weight: bold; }
+    #resume-btn { margin-top: 1rem; padding: .6rem 1.2rem; font-size: 1rem; cursor: pointer; background: #2B2727; color: #efdaa4; border: none; border-radius: 6px; }
+    #resume-btn:hover { background: #3d3838; }
+  </style>
+</head>
+<body>
+
+<a class="dashboard-back" href="{% url 'email_campaign_list' %}">&larr; Back to Campaigns</a>
+
+<h1>{{ campaign.subject }}</h1>
+<p class="subtitle">{{ campaign.get_purpose_display }}</p>
+
+<div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+<p id="counts">
+  <span id="status-label">{{ campaign.get_status_display }}</span> —
+  <span id="sent-count">{{ campaign.sent_count }}</span> sent,
+  <span id="failed-count">{{ campaign.failed_count }}</span> failed,
+  of <span id="recipient-count">{{ campaign.recipient_count }}</span>
+</p>
+
+<form id="resume-form" method="post" action="{% url 'email_campaign_send' campaign.pk %}" style="display: none;">
+  {% csrf_token %}
+  <button type="submit" id="resume-btn">Resume sending</button>
+</form>
+
+<input type="hidden" id="campaign_id" value="{{ campaign.pk }}">
+<input type="hidden" id="initial_status" value="{{ campaign.status }}">
+<script src="{% static 'passports/email_status.js' %}"></script>
+</body>
+</html>

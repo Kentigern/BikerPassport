@@ -168,6 +168,7 @@
     </form>
     <a class="nav-button secondary" href="{% url 'raffle_draw' %}">Run Raffle Draw</a>
   {% endif %}
+  <a class="nav-button secondary" href="{% url 'email_campaign_list' %}">Bulk Email</a>
   <a class="nav-button secondary" href="{% url 'audit_log' %}">View Audit Log</a>
   <form method="post" action="{% url 'admin:logout' %}">
     {% csrf_token %}

@@ -14,4 +14,25 @@ urlpatterns = [
     path('submissions/save/', views.submission_save_view, name='submission_save'),
     path('bearers/search/', views.bearer_search_view, name='bearer_search'),
     path('bearers/save/', views.bearer_save_view, name='bearer_save'),
+    path('emails/', views.email_campaign_list_view, name='email_campaign_list'),
+    path('emails/new/', views.email_campaign_form_view, name='email_campaign_new'),
+    path('emails/<int:pk>/edit/', views.email_campaign_form_view, name='email_campaign_edit'),
+    path(
+        'emails/recipient-count/',
+        views.email_campaign_recipient_count_view,
+        name='email_campaign_recipient_count',
+    ),
+    path('emails/<int:pk>/preview/', views.email_campaign_preview_view, name='email_campaign_preview'),
+    path('emails/<int:pk>/send/', views.email_campaign_send_view, name='email_campaign_send'),
+    path('emails/<int:pk>/status/', views.email_campaign_status_view, name='email_campaign_status'),
+    path(
+        'emails/<int:pk>/status.json',
+        views.email_campaign_status_json_view,
+        name='email_campaign_status_json',
+    ),
+    path(
+        'email/unsubscribe/<uuid:token>/<str:purpose>/',
+        views.email_unsubscribe_view,
+        name='email_unsubscribe',
+    ),
 ]

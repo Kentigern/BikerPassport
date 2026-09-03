@@ -207,3 +207,13 @@ EMAIL_HOST_USER = os.environ.get('DJANGO_EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('DJANGO_EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = os.environ.get('DJANGO_EMAIL_USE_TLS', 'True') == 'True'
 DEFAULT_FROM_EMAIL = os.environ.get('DJANGO_DEFAULT_FROM_EMAIL', 'noreply@makeyourmark.co.uk')
+
+# Bulk-email links (unsubscribe) need a real absolute URL and are built
+# outside of any request (a background send has no request to derive one
+# from) — so, unlike everywhere else in this app, the scheme+host is a
+# plain setting rather than request.build_absolute_uri(). Falls back to
+# the first CSRF-trusted origin so a plain textual mistake in the env
+# isn't required for local/dev use.
+PUBLIC_BASE_URL = os.environ.get(
+    'DJANGO_PUBLIC_BASE_URL', CSRF_TRUSTED_ORIGINS[0] if CSRF_TRUSTED_ORIGINS else 'http://localhost:8000'
+)

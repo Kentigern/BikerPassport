@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Make Your Mark</title>
+</head>
+<body style="margin:0; padding:0; background:#f7f7f5; font-family:system-ui, sans-serif;">
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f7f5; padding:2rem 0;">
+  <tr>
+    <td align="center">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%; background:#ffffff; border-radius:10px; overflow:hidden;">
+        <tr>
+          <td style="background:#2B2727; color:#efdaa4; padding:1.25rem 1.5rem; font-size:1.1rem; font-weight:bold;">
+            Make Your Mark — Bike + Brew
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:1.5rem; color:#222; font-size:1rem; line-height:1.5;">
+            {{ body_html|safe }}
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:1rem 1.5rem; border-top:1px solid #eee; color:#888; font-size:.8rem;">
+            You're receiving this because you took part in Bike + Brew and agreed to be contacted.
+            <a href="{{ unsubscribe_url }}" style="color:#888;">Unsubscribe from this kind of email</a>.
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+</body>
+</html>

@@ -3,7 +3,16 @@ from django.shortcuts import redirect
 from simple_history.admin import SimpleHistoryAdmin
 
 from .access import is_bearer_verified, mark_bearer_verified
-from .models import Bearer, PassportSubmission, RaffleExport, RaffleWinner, Season, Venue
+from .models import (
+    Bearer,
+    EmailCampaign,
+    EmailCampaignRecipient,
+    PassportSubmission,
+    RaffleExport,
+    RaffleWinner,
+    Season,
+    Venue,
+)
 from .phone import normalize_uk_phone
 
 admin.site.site_header = "MARK Passport Administration"
@@ -164,6 +173,36 @@ class RaffleExportAdmin(admin.ModelAdmin):
     list_display = ['season', 'generated_by', 'generated_at', 'entry_count']
     list_filter = ['season']
     search_fields = ['generated_by__username', 'season__name']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+class EmailCampaignRecipientInline(admin.TabularInline):
+    model = EmailCampaignRecipient
+    extra = 0
+    readonly_fields = ['bearer', 'status', 'error_message', 'sent_at']
+    can_delete = False
+
+
+@admin.register(EmailCampaign)
+class EmailCampaignAdmin(admin.ModelAdmin):
+    """Read-only, same rationale as RaffleExportAdmin — drafting, editing,
+    previewing, and sending a campaign all go through the app's own
+    dashboard-linked flow (which computes the consent-gated audience and
+    locks a sent campaign against further edits); this is just for
+    troubleshooting visibility, not a second way to author one."""
+
+    list_display = ['subject', 'purpose', 'status', 'sent_count', 'failed_count', 'created_by', 'sent_at']
+    list_filter = ['purpose', 'status']
+    search_fields = ['subject', 'created_by__username']
+    inlines = [EmailCampaignRecipientInline]
 
     def has_add_permission(self, request):
         return False

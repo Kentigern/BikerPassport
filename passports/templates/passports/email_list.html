@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Bulk Email — MARK Passport Administration</title>
+  <link rel="icon" href="https://makeyourmark.co.uk/wp-content/uploads/2025/08/MARK-Favicon-100x100.png">
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      margin: 2rem auto;
+      max-width: 1000px;
+      color: #222;
+      background: #f7f7f5;
+    }
+    .back-link {
+      display: inline-block;
+      margin-bottom: 1.5rem;
+      padding: .6rem 1.2rem;
+      background: #2B2727;
+      color: #efdaa4;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: .95rem;
+      border-radius: 8px;
+    }
+    .back-link:hover { background: #3d3838; }
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    h1 { font-size: 1.4rem; color: #2B2727; margin: 0; }
+    .new-campaign-btn {
+      padding: .6rem 1.2rem;
+      background: #2B2727;
+      color: #efdaa4;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: .95rem;
+      border-radius: 8px;
+    }
+    .new-campaign-btn:hover { background: #3d3838; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    th, td {
+      text-align: left;
+      padding: .6rem .8rem;
+      border-bottom: 1px solid #eee;
+      font-size: .9rem;
+    }
+    th { background: #2B2727; color: #efdaa4; }
+    tr:last-child td { border-bottom: none; }
+    tr.clickable-row { cursor: pointer; }
+    tr.clickable-row:hover { background: #f7f7f5; }
+    .badge {
+      display: inline-block;
+      padding: .15rem .55rem;
+      border-radius: 999px;
+      font-size: .75rem;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+    .badge-draft { background: #ece0f6; color: #4b2e73; }
+    .badge-sending { background: #f6e9c9; color: #6b4e00; }
+    .badge-sent { background: #ddefdd; color: #1f5a1f; }
+    .empty-note { color: #888; padding: 1rem 0; }
+  </style>
+</head>
+<body>
+
+<a class="back-link" href="{% url dashboard_url_name %}">&larr; Back to Dashboard</a>
+
+<div class="header-row">
+  <h1>Bulk Email</h1>
+  <a class="new-campaign-btn" href="{% url 'email_campaign_new' %}">New Campaign</a>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Subject</th>
+      <th>Purpose</th>
+      <th>Status</th>
+      <th>Recipients</th>
+      <th>Created</th>
+      <th>Sent</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for campaign in campaigns %}
+      <tr class="clickable-row" onclick="window.location='{% if campaign.status == 'draft' %}{% url 'email_campaign_edit' campaign.pk %}{% else %}{% url 'email_campaign_status' campaign.pk %}{% endif %}'">
+        <td>{{ campaign.subject }}</td>
+        <td>{{ campaign.get_purpose_display }}</td>
+        <td><span class="badge badge-{{ campaign.status }}">{{ campaign.get_status_display }}</span></td>
+        <td>{{ campaign.sent_count }} / {{ campaign.recipient_count }}</td>
+        <td>{{ campaign.created_at|date:"Y-m-d H:i" }}</td>
+        <td>{{ campaign.sent_at|date:"Y-m-d H:i"|default:"—" }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6" class="empty-note">No campaigns yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+</body>
+</html>

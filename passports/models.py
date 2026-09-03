@@ -306,3 +306,76 @@ class RaffleWinner(models.Model):
 
     def __str__(self):
         return f"{self.bearer} — {self.season} — drawn {self.drawn_at:%Y-%m-%d %H:%M}"
+
+
+class EmailCampaign(models.Model):
+    """A bulk email a Site Admin drafts, previews, and sends to bearers.
+
+    The audience is never admin-chosen — it's derived entirely from
+    `purpose`, which maps to one of Bearer's two purpose-specific consent
+    flags (§5.6). This makes it structurally impossible to bulk-email a
+    bearer who hasn't granted that specific consent."""
+
+    class Purpose(models.TextChoices):
+        NEXT_SEASON = 'next_season', 'Next season update'
+        MARKETING = 'marketing', 'Other MYM news/events'
+
+    class Status(models.TextChoices):
+        DRAFT = 'draft', 'Draft'
+        SENDING = 'sending', 'Sending'
+        SENT = 'sent', 'Sent'
+
+    subject = models.CharField(max_length=200)
+    body_html = models.TextField(blank=True, help_text="Rich-text body from the editor.")
+    purpose = models.CharField(max_length=20, choices=Purpose.choices)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.DRAFT)
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='email_campaigns',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+
+    # Denormalized so the status page can poll cheaply instead of
+    # re-counting EmailCampaignRecipient rows on every request.
+    recipient_count = models.PositiveIntegerField(default=0)
+    sent_count = models.PositiveIntegerField(default=0)
+    failed_count = models.PositiveIntegerField(default=0)
+
+    history = HistoricalRecords()
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.subject} ({self.get_purpose_display()}) — {self.get_status_display()}"
+
+
+class EmailCampaignRecipient(models.Model):
+    """One bearer's send-time slot in a campaign — snapshotted when Send is
+    clicked, so the audience is locked in up front rather than
+    re-evaluated mid-send, and so a stalled/interrupted send can safely
+    resume by just processing whatever's still `pending`."""
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        SENT = 'sent', 'Sent'
+        FAILED = 'failed', 'Failed'
+
+    campaign = models.ForeignKey(EmailCampaign, on_delete=models.CASCADE, related_name='recipients')
+    bearer = models.ForeignKey(Bearer, on_delete=models.CASCADE, related_name='campaign_sends')
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    error_message = models.TextField(blank=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['campaign', 'bearer'], name='unique_recipient_per_campaign'),
+        ]
+
+    def __str__(self):
+        return f"{self.bearer} — {self.campaign} — {self.get_status_display()}"
