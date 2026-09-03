@@ -3,6 +3,8 @@
 Internal staff tool for Make Your Mark's annual Bike + Brew fundraiser — see
 [SPEC.md](SPEC.md) for the full specification.
 
+Repository: https://github.com/Kentigern/BikerPassport
+
 ## Requirements
 
 - Python 3.11+
