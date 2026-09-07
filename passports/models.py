@@ -113,7 +113,10 @@ class Bearer(models.Model):
         help_text="Often not collected — bearers skew older and this is an "
         "old-school charity. Phone is the more reliable match key.",
     )
-    mailing_address = models.TextField()
+    mailing_address = models.TextField(
+        blank=True,
+        help_text="Not always collected — some bearers only give a phone number.",
+    )
     phone = models.CharField(
         max_length=30,
         unique=True,
