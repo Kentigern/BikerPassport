@@ -58,6 +58,18 @@
     .big-button:hover {
       background: #e0c785;
     }
+    .hosting-footer {
+      position: absolute;
+      bottom: 1rem;
+      left: 0;
+      right: 0;
+      text-align: center;
+      color: #a3906a;
+      font-size: .8rem;
+    }
+    .hosting-footer a {
+      color: #a3906a;
+    }
   </style>
 </head>
 <body>
@@ -75,6 +87,8 @@
   <p class="tagline">Ride united. Heal united.</p>
   <a class="big-button" href="{% url 'submission_new' %}">Log a Submission</a>
 </div>
+
+<p class="hosting-footer">Hosting kindly provided by <a href="https://krystal.io" target="_blank" rel="noopener">Krystal</a></p>
 
 </body>
 </html>
