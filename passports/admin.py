@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.shortcuts import redirect
 from simple_history.admin import SimpleHistoryAdmin
 
-from .access import is_bearer_verified, mark_bearer_verified
+from .access import is_bearer_verified, is_site_admin, mark_bearer_verified
 from .models import (
     Bearer,
     EmailCampaign,
