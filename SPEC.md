@@ -1,7 +1,7 @@
 # Bike + Brew Passport Processing System — Specification
 
 **Charity:** Make Your Mark
-**Status:** Draft v0.1 — architecture decisions below are Claude's calls per user request ("Claude decide, keep under review"). Flagged items should be revisited as the project develops.
+**Status:** v0.2 — architecture decisions below are Claude's calls per user request ("Claude decide, keep under review"). Flagged items should be revisited as the project develops. Updated from v0.1 to document functionality actually built since the initial draft (§5.7–5.10, and the hosting decision in §7/§9) — v0.1's architecture reasoning is left intact where still accurate rather than rewritten.
 
 ## 1. Purpose
 
@@ -25,8 +25,9 @@ This is an internal, staff-facing data-entry and reporting tool — not a public
 ## 3. Actors
 
 - **Staff/volunteer** — logs in, processes returned passports, can look up and correct past entries, runs reports. Expect up to **30 volunteers** working concurrently during the intake window. Staff are assigned to Django groups matching their role (e.g. "Passport Logger", "Venue Admins"); ordinary Django group permissions govern create/read/update/delete access consistently across every model, **including** the intake form's own endpoints, not just the raw admin — see §5.2 for the Bearer-specific extra layer.
-- **Bearer** — never logs in to the main app. Interacts via the physical passport, the summary email they receive, and (new — see §5.6) a single no-login consent link in that email.
-- **Admin** — a staff role with additional permissions to manage the cafe list, seasons, staff accounts, and data retention/purge, via a group with the relevant permissions.
+- **Bearer** — never logs in to the main app. Interacts via the physical passport, the summary email they receive, and (new — see §5.6) a single no-login consent link in that email. As of §5.10, also receives an occasional purpose-specific bulk email, each carrying its own no-login unsubscribe link.
+- **Admin** — a staff role with additional permissions to manage the cafe list, seasons, staff accounts, data retention/purge, the live raffle draw, and bulk email, via a group with the relevant permissions. Built as a real Django permission (`passports.is_site_admin`, granted to a "Site Admin" group by default) rather than a hardcoded group-name check, so the group itself can be renamed/reorganized without breaking authorization — see §5.7.
+- **Passport Logger** — the day-to-day data-entry role from §3's original "Staff/volunteer" description, named to match the group this build actually uses. Lands on a minimal intake-only landing page ("Logger Dashboard" — just a "Log a Submission" button) rather than the Site Admin's stats dashboard; see §5.7.
 
 ### Scale (confirmed)
 
@@ -97,6 +98,36 @@ Processing model:
 
 This is consent/retention *for data the charity already lawfully holds to run this season's raffle* — it does not block processing a submission or paying out a raffle ticket regardless of how (or whether) the bearer responds.
 
+### 5.7 Site Admin dashboard & role-based navigation
+
+Every logged-in user lands on a dashboard for their role immediately after login, rather than a single fixed page:
+
+- **Site Admin** (or superuser) → the **Dashboard**: current-season stat cards (total logged, logged today) and top-5 panels (venues by visits, loggers by passports logged, bearers by venues visited), plus a persistent sidebar linking to every other Site Admin workflow (Log a Submission, Site Administration/raw admin, Produce Raffle Tickets, Run Raffle Draw, Bulk Email, View Audit Log).
+- **Passport Logger** (or any other non-admin staff) → the **Logger Dashboard**: just the one "Log a Submission" button — deliberately minimal, since intake is their whole job.
+
+Every other staff-facing page (the intake form, audit log, raffle draw, bulk email, and the raw Django admin) carries a prominent "Back to Dashboard" button that returns the user to *their own* dashboard, not a fixed one — a shared role check (mirrored between the initial-login redirect and a small helper available to every template) decides which.
+
+### 5.8 Audit log
+
+A single, searchable, filterable timeline for Site Admins, merging what would otherwise be several separate audit trails: Bearer and Passport Submission history (covering edits made via *either* the intake form or the raw admin), the raw admin's own change log for everything else (Users, Groups, Venue, Season), raffle ticket exports, raffle winners drawn, and bulk email sends (§5.10). Filterable by category or free-text search (actor or subject), paginated, newest first — satisfies §6's "who entered/edited each submission and when" requirement with one page rather than requiring a Site Admin to check several models' raw admin history separately.
+
+### 5.9 Live raffle draw
+
+Beyond the CSV ticket export (§5.5, still available and unchanged — a full ticket list for a manual/backup paper draw if wanted), the system can now run the raffle draw itself, live, on-screen, at the event:
+
+- A weighted-random pick happens **server-side** the instant a Site Admin clicks "Draw Next Winner" — over every bearer still eligible this season (i.e. not already drawn), weighted by their ticket count. The on-screen animation (a roulette-style wheel, or an alternative slot-machine view) is purely theatrical, landing on whatever the server already picked — the draw itself can't be influenced by anything happening in the browser.
+- Each winner drawn is recorded permanently (bearer, prize label if entered, ticket count and a display ticket number at the moment of drawing, who drew them, when) and is immediately excluded from all further draws this season — refreshing or reopening the page mid-ceremony is always safe and just resumes where the draw left off, since eligibility is recomputed fresh from the winners recorded so far rather than tracked client-side.
+- This **narrows §8's original "automatic raffle drawing is out of scope"** — the draw now happens inside the system rather than assumed to happen outside it. What's still out of scope is anything about physically awarding/shipping prizes.
+
+### 5.10 Bulk email to bearers
+
+Realizes the purpose-specific marketing consent idea from §11.2: Site Admins can draft, edit, preview, and send a rich-text bulk email to bearers, with **its audience computed automatically and non-editably** from whichever of the two consent purposes (§5.6, §11.2) the email is for — "next season update" or "other Make Your Mark news/events." There is no way, from the UI, to bulk-email a bearer who hasn't granted that specific consent.
+
+- **Preview** shows the exact branded HTML the email will send (same template the real send uses), before anything goes out.
+- **Sending** happens in the background rather than blocking the page, and is resumable — the recipient list is locked in the moment Send is clicked (so it can't shift mid-send), and each recipient's own send status is tracked, so re-triggering a stalled send only processes whoever's left.
+- Every sent email carries a one-click, no-login **unsubscribe** link specific to that consent purpose (reusing the same consent-token mechanism as §5.6, rather than a separate token), and every send is logged in the audit log (§5.8).
+- Deliberately minimal for this first version: one shared version of the email for every recipient (no per-bearer merge fields yet), no scheduling, and no open/click tracking.
+
 ## 6. Non-Functional Requirements
 
 - **Scale:** seasonal and bursty but not small — up to 5,000 submissions over a 6-week window (§3), entered by up to 30 volunteers working concurrently. The app needs to comfortably handle ~30 simultaneous logged-in data-entry sessions; this is still a modest load for any conventional web framework/database, but it rules out a single-writer datastore (see §7 database row).
@@ -112,22 +143,25 @@ This is consent/retention *for data the charity already lawfully holds to run th
 | Language/framework | **Python + Django** | Free/open-source (BSD license). Django's built-in admin framework is a strong fit for an internal staff data-entry/reporting tool like this — much of §5 can be built on top of it rather than from scratch, saving significant effort. |
 | Database | **PostgreSQL** | Free/open-source, mature, well-supported by Django. With up to 30 volunteers writing concurrently (§6), SQLite's single-writer locking model would cause real contention during intake — Postgres removes that risk. (SQLite remains fine for local dev.) |
 | Email | Django's SMTP email backend, pointed at whatever mail account/relay the charity already controls (e.g. its own domain's SMTP, or a free-tier transactional mail provider) | No proprietary software dependency — SMTP is a protocol, not licensed software. The specific mail provider is a hosting/ops decision, not an architecture one. |
-| Hosting | **Railway** for the online demo (`Procfile`: gunicorn + WhiteNoise for static files, managed Postgres plugin) — a self-hosted VM or another PaaS tier remains an option for the charity's actual production deployment once decided | Doesn't affect software licensing either way since these are hosting services, not software dependencies. Railway chosen for the demo for its low setup friction; not a commitment for the charity's real deployment. |
+| Hosting | **Railway** for dev/test (`Procfile`: gunicorn + WhiteNoise for static files, managed Postgres plugin). **Production: Krystal.io** — decided since v0.1, on cost (a substantial charity discount on their commercial plans) and the charity's preference for an ethically-run provider. Krystal has no Railway-equivalent git-push PaaS for Python apps (their own docs steer production Python workloads to a plain VPS, not their shared-hosting "Python apps" feature) — production deploys will need their own small pipeline built on top of a Krystal Cloud VM (e.g. GitHub Actions over SSH, or their DeployHQ product), which Railway's managed PaaS gave for free. See §9. | Doesn't affect software licensing either way since these are hosting services, not software dependencies. |
 | Frontend | Django server-rendered templates (+ minimal JS for the 296-checkbox UI: search/filter, live-updating stamp count) | Keeps the stack simple — no separate frontend framework/build pipeline needed for a form-and-reports tool like this. |
 
 ## 8. Explicitly Out of Scope (for now)
 
-- Bearer self-service accounts, online stamp collection, or a bearer-facing portal — with the one narrow exception of the single-purpose, no-login consent link (§5.6).
+- Bearer self-service accounts, online stamp collection, or a bearer-facing portal — with the one narrow exception of the single-purpose, no-login links: the consent link (§5.6) and each bulk email's unsubscribe link (§5.10).
 - Payment processing.
-- Automatic raffle drawing (the system produces the ticket list; the draw itself is assumed to happen outside the system).
+- ~~Automatic raffle drawing~~ — **now in scope**, see §5.9. Physically awarding/shipping prizes remains out of scope.
 - Multi-charity/multi-tenant support.
+- Per-bearer merge-field personalization, scheduled sends, or open/click tracking on bulk email (§5.10) — noted there as a deliberate v1 simplification, not ruled out long-term.
 
 ## 9. Open Questions
 
 - Exact list of the 296 cafes and their numbering — needed before cafe-list import can be built.
 - Does a bearer's identity ever need to match across seasons (e.g. "returning bearer" recognition), or is every submission independent? Affects whether Bearer should dedupe/link across Season.
-- Preferred hosting environment and mail-sending account (§7 hosting/email rows) — 30 concurrent users and a mail-sending volume of up to 5,000 emails in a burst may affect the choice of provider/relay.
-- Any existing branding/template requirements for the confirmation email.
+- ~~Preferred hosting environment~~ — **resolved**: Krystal.io for production (§7). Still open: **mail-sending account** — no host (Railway dev/test or Krystal production) has real SMTP credentials configured yet, so email sending (both §5.3's confirmation email and §5.10's bulk email) currently only reaches Django's console log everywhere, not real inboxes. 30 concurrent users and a mail-sending volume of up to 5,000 emails in a burst may affect the choice of provider/relay once an account is chosen.
+- **Krystal production deploy pipeline** (new, §7): since Krystal has no Railway-equivalent, decide how deploys actually happen there — their own DeployHQ product, or a plain GitHub Actions → SSH workflow — and whether that pipeline (and the VM itself) is something this project sets up, or something the charity's existing web team already has a pattern for.
+- Any existing branding/template requirements for the confirmation email (§5.3) — also relevant to the bulk email template introduced in §5.10, which currently uses placeholder branding (colors only, no logo/imagery).
+- **§5.3's confirmation email itself is still unbuilt** — the data model and consent-request wording exist, but no code sends it yet. §5.10's bulk email (a different, admin-triggered feature) was built first because it was asked for first; this is noted so it isn't assumed to already exist.
 - **Consent default posture (§5.6):** should this be strict opt-in (retain only on explicit "yes," which is the safer/GDPR-style default assumed here), or opt-out? Is there a specific legal/regulatory framework the charity needs to comply with (jurisdiction, data protection law) that should govern this?
 - **Retention grace period (§5.6):** how long after a season's raffle concludes should a declined/non-responding bearer's personal data be purged? (Spec currently leaves this as an admin-configurable period, no default chosen.)
 - How should volunteers physically log/batch incoming passports in the 6-week window (§5.2) — is there an existing mailroom process this should slot into, or should the system define one?
@@ -183,3 +217,4 @@ Not being built now — noted so today's data model doesn't quietly foreclose th
 - Bearer data retained under consent (§5.6) is currently framed around one purpose: keeping contact details for *next season's* Bike + Brew. The charity may in future want to use the same retained data to market other things — future events, online merchandise.
 - That's a **distinct consent purpose** from "keep my details for next year's passport," and best practice (and likely relevant data-protection law, per the open question in §9) is to ask for it separately rather than assume a bearer who agreed to one has agreed to the other.
 - Implication for the current build: design the consent capture in §5.6 to be purpose-specific from the start (e.g. separate opt-ins — "contact me about next year's Bike + Brew" vs. "contact me about other Make Your Mark events and merchandise") rather than a single generic yes/no. This costs little now and avoids having to re-contact bearers to ask again if the charity wants to broaden how it uses the data later.
+- **Implemented as of §5.10**: the purpose-specific opt-ins described above now exist and gate an actual bulk-email feature — this section's "future possibility" is built, not just modeled.
