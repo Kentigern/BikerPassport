@@ -152,6 +152,11 @@
       color: #888;
       font-size: .85rem;
     }
+    .panel-scroll {
+      max-height: 320px;
+      overflow-y: auto;
+      padding-right: .25rem;
+    }
     .hosting-footer {
       margin-top: 2rem;
       color: #999;
@@ -261,6 +266,68 @@
         {% empty %}
           <p class="empty-note">No bearers logged yet this season.</p>
         {% endfor %}
+      </div>
+    </div>
+
+    <div class="panels" style="margin-top: 1.25rem;">
+      <div class="panel">
+        <h3>All Venues by Visits</h3>
+        <div class="panel-scroll">
+          {% for row in all_venues %}
+            <div class="rank-row">
+              <span class="rank-number">{{ forloop.counter }}</span>
+              <div class="rank-bar-wrap">
+                <div class="rank-bar" style="width: {{ row.pct }}%;"></div>
+                <div class="rank-label">
+                  <span>{{ row.obj.name }}</span>
+                  <span>{{ row.count }}</span>
+                </div>
+              </div>
+            </div>
+          {% empty %}
+            <p class="empty-note">No venues yet.</p>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>All Loggers by Passports Logged</h3>
+        <div class="panel-scroll">
+          {% for row in all_loggers %}
+            <div class="rank-row">
+              <span class="rank-number">{{ forloop.counter }}</span>
+              <div class="rank-bar-wrap">
+                <div class="rank-bar" style="width: {{ row.pct }}%;"></div>
+                <div class="rank-label">
+                  <span>{{ row.obj.get_full_name|default:row.obj.username }}</span>
+                  <span>{{ row.count }}</span>
+                </div>
+              </div>
+            </div>
+          {% empty %}
+            <p class="empty-note">No loggers yet.</p>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>All Bearers by Venues Visited</h3>
+        <div class="panel-scroll">
+          {% for row in all_bearers %}
+            <div class="rank-row">
+              <span class="rank-number">{{ forloop.counter }}</span>
+              <div class="rank-bar-wrap">
+                <div class="rank-bar" style="width: {{ row.pct }}%;"></div>
+                <div class="rank-label">
+                  <span>{{ row.obj.name }}</span>
+                  <span>{{ row.count }}</span>
+                </div>
+              </div>
+            </div>
+          {% empty %}
+            <p class="empty-note">No bearers yet.</p>
+          {% endfor %}
+        </div>
       </div>
     </div>
   {% endif %}

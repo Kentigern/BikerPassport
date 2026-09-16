@@ -128,6 +128,33 @@ def dashboard_view(request):
         'venues_visited',
     )[:5]
 
+    all_venues = _ranked(
+        Venue.objects.annotate(
+            visit_count=Count('submissions', filter=Q(submissions__season=season))
+        ).order_by('-visit_count', 'name'),
+        'visit_count',
+    )
+
+    all_loggers = _ranked(
+        get_user_model()
+        .objects.annotate(
+            logged_count=Count('entered_submissions', filter=Q(entered_submissions__season=season))
+        )
+        .order_by('-logged_count', 'username'),
+        'logged_count',
+    )
+
+    all_bearers = _ranked(
+        Bearer.objects.annotate(
+            venues_visited=Count(
+                'submissions__venues_stamped',
+                filter=Q(submissions__season=season),
+                distinct=True,
+            )
+        ).order_by('-venues_visited', 'name'),
+        'venues_visited',
+    )
+
     context.update(
         {
             'total_logged': submissions.count(),
@@ -135,6 +162,9 @@ def dashboard_view(request):
             'top_venues': top_venues,
             'top_loggers': top_loggers,
             'top_bearers': top_bearers,
+            'all_venues': all_venues,
+            'all_loggers': all_loggers,
+            'all_bearers': all_bearers,
         }
     )
     return render(request, 'passports/dashboard.html', context)
