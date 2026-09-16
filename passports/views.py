@@ -23,7 +23,7 @@ from .access import (
     is_submission_editable,
     mark_bearer_verified,
 )
-from .emailing import qualifying_bearers, send_campaign, snapshot_recipients
+from .emailing import qualifying_bearers, send_campaign, send_submission_confirmation, snapshot_recipients
 from .forms import BearerForm
 from .models import (
     Bearer,
@@ -693,10 +693,24 @@ def submission_save_view(request):
 
     # Save & Exit closes this submission out for good — see
     # access.is_submission_editable/is_bearer_editable, which a Logger
-    # (but not a Site Admin/superuser) is held to from now on.
+    # (but not a Site Admin/superuser) is held to from now on. The
+    # confirmation email (§5.3) fires exactly once, at this same moment,
+    # for the same reason: re-exiting an already-locked submission is
+    # blocked above, so this branch only ever runs the first time.
     if request.POST.get('exit') == 'true' and submission.locked_at is None:
         submission.locked_at = timezone.now()
         submission.save(update_fields=['locked_at'])
+
+        if submission.bearer.email:
+            try:
+                send_submission_confirmation(submission)
+            except Exception:  # noqa: BLE001 — a bad address/API error must not block the save
+                submission.email_send_failed = True
+                submission.save(update_fields=['email_send_failed'])
+            else:
+                submission.status = PassportSubmission.Status.EMAILED
+                submission.email_sent_at = timezone.now()
+                submission.save(update_fields=['status', 'email_sent_at'])
 
     return JsonResponse(
         {

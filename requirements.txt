@@ -6,3 +6,4 @@ phonenumbers
 gunicorn
 whitenoise
 dj-database-url
+resend

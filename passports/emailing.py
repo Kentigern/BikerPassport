@@ -12,6 +12,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import strip_tags
 
+from . import resend_client
 from .models import Bearer, EmailCampaign, EmailCampaignRecipient
 
 PURPOSE_CONSENT_FIELD = {
@@ -48,6 +49,33 @@ def build_unsubscribe_url(bearer, purpose):
     has no request) and the preview view render the identical link."""
     path = reverse('email_unsubscribe', kwargs={'token': bearer.consent_token, 'purpose': purpose})
     return f"{settings.PUBLIC_BASE_URL}{path}"
+
+
+def send_submission_confirmation(submission):
+    """The confirmation email (§5.3) — sent once, via Resend, the first
+    time a submission is saved & exited (see submission_save_view). Just
+    the stamps/venues/tickets receipt — the data-retention consent request
+    §5.3 also describes is a separate, not-yet-built use case, deliberately
+    left out here. Callers are responsible for checking the bearer has an
+    email on file before calling this, and for recording success/failure on
+    the submission (status/email_sent_at/email_send_failed) — this function
+    only sends."""
+    bearer = submission.bearer
+    html_body = render_to_string(
+        'passports/submission_confirmation_email.html',
+        {
+            'submission': submission,
+            'venues': submission.venues_stamped.order_by('number'),
+            'stamp_count': submission.stamp_count,
+            'raffle_tickets': submission.raffle_tickets,
+        },
+    )
+    resend_client.send_email(
+        to=bearer.email,
+        subject='Your Bike + Brew passport has been processed',
+        html_body=html_body,
+        text_body=strip_tags(html_body),
+    )
 
 
 def send_campaign(campaign_id):

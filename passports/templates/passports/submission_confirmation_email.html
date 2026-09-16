@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Make Your Mark</title>
+</head>
+<body style="margin:0; padding:0; background:#f7f7f5; font-family:system-ui, sans-serif;">
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f7f5; padding:2rem 0;">
+  <tr>
+    <td align="center">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%; background:#ffffff; border-radius:10px; overflow:hidden;">
+        <tr>
+          <td style="background:#2B2727; color:#efdaa4; padding:1.25rem 1.5rem; font-size:1.1rem; font-weight:bold;">
+            Make Your Mark — Bike + Brew
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:1.5rem; color:#222; font-size:1rem; line-height:1.5;">
+            <p>Hi {{ submission.bearer.name }},</p>
+            <p>Thanks for taking part in Bike + Brew this season — your passport has been processed.</p>
+
+            <p>
+              <strong>{{ stamp_count }}</strong> stamp{{ stamp_count|pluralize }} collected, earning
+              <strong>{{ raffle_tickets }}</strong> raffle ticket{{ raffle_tickets|pluralize }}.
+            </p>
+
+            <p>Cafes visited:</p>
+            <ul style="padding-left:1.2rem; margin:0 0 1rem;">
+              {% for venue in venues %}
+                <li>{{ venue.number }}. {{ venue.name }}</li>
+              {% endfor %}
+            </ul>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:1rem 1.5rem; border-top:1px solid #eee; color:#888; font-size:.8rem;">
+            Make Your Mark — Bike + Brew
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+</body>
+</html>

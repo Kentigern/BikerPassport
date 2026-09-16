@@ -208,6 +208,12 @@ EMAIL_HOST_PASSWORD = os.environ.get('DJANGO_EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = os.environ.get('DJANGO_EMAIL_USE_TLS', 'True') == 'True'
 DEFAULT_FROM_EMAIL = os.environ.get('DJANGO_DEFAULT_FROM_EMAIL', 'noreply@makeyourmark.co.uk')
 
+# Resend (https://resend.com) — an HTTP-based provider, used directly via
+# its API rather than through EMAIL_BACKEND/SMTP above. First wired up for
+# the submission confirmation email (§5.3); see passports/resend_client.py.
+# Blank in dev, where resend_client logs instead of calling the real API.
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
+
 # Bulk-email links (unsubscribe) need a real absolute URL and are built
 # outside of any request (a background send has no request to derive one
 # from) — so, unlike everywhere else in this app, the scheme+host is a
