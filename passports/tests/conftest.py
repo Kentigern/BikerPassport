@@ -73,6 +73,56 @@ def staff_user(db, django_user_model):
 
 
 @pytest.fixture
+def logger_user(db, django_user_model):
+    """A non-superuser staff user with the real-world Passport Logger
+    group's permission set — used to exercise the post-exit lock, which
+    only applies to non-privileged users (see access.is_submission_editable
+    / is_bearer_editable)."""
+    from django.contrib.auth.models import Group, Permission
+    from django.contrib.contenttypes.models import ContentType
+
+    # A prior test in the same run may have used live_server/transactional_db,
+    # which truncates auth_permission/django_content_type without pytest-django
+    # restoring them (no serialized_rollback here), while
+    # ContentType.objects.get_for_model's process-wide cache keeps serving
+    # stale (no-longer-persisted) rows — the combination silently breaks
+    # Django's own create_permissions helper. Recreate exactly what this
+    # fixture needs directly, bypassing both.
+    permissions_by_model = {
+        'bearer': ['add_bearer', 'change_bearer', 'view_bearer'],
+        'passportsubmission': ['add_passportsubmission', 'change_passportsubmission', 'view_passportsubmission'],
+    }
+    needed_permissions = []
+    for model_name, codenames in permissions_by_model.items():
+        content_type, _ = ContentType.objects.get_or_create(app_label='passports', model=model_name)
+        for codename in codenames:
+            permission, _ = Permission.objects.get_or_create(
+                content_type=content_type, codename=codename, defaults={'name': f'Can {codename.split("_")[0]} {model_name}'}
+            )
+            needed_permissions.append(permission)
+
+    group, _ = Group.objects.get_or_create(name='Passport Logger')
+    group.permissions.set(needed_permissions)
+    user = django_user_model.objects.create_user(
+        username='e2e_logger', email='e2e_logger@example.com', password=STAFF_PASSWORD, is_staff=True
+    )
+    user.groups.add(group)
+    return user
+
+
+@pytest.fixture
+def logged_in_page_as_logger(page, live_server, logger_user):
+    """Same starting point as logged_in_page, but as a Passport Logger
+    rather than a superuser."""
+    page.goto(f'{live_server.url}/admin/login/?next=/passports/submissions/new/')
+    page.fill('#id_username', logger_user.username)
+    page.fill('#id_password', STAFF_PASSWORD)
+    page.click('input[type=submit]')
+    page.wait_for_url(f'{live_server.url}/passports/submissions/new/')
+    return page
+
+
+@pytest.fixture
 def logged_in_page(page, live_server, staff_user):
     """A Playwright page logged in as a staff superuser, parked on the
     new-submission intake form — the common starting point for the

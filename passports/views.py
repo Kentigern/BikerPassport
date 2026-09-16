@@ -16,7 +16,13 @@ from django.utils.dateparse import parse_date
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.http import require_POST
 
-from .access import is_bearer_verified, is_site_admin, mark_bearer_verified
+from .access import (
+    is_bearer_editable,
+    is_bearer_verified,
+    is_site_admin,
+    is_submission_editable,
+    mark_bearer_verified,
+)
 from .emailing import qualifying_bearers, send_campaign, snapshot_recipients
 from .forms import BearerForm
 from .models import (
@@ -521,6 +527,8 @@ def submission_form_view(request, pk=None):
             raise PermissionDenied
         if not is_bearer_verified(request, submission.bearer_id):
             raise PermissionDenied
+        if not is_submission_editable(request.user, submission):
+            raise PermissionDenied
 
     bearer_form = BearerForm(instance=submission.bearer if submission else None)
     checked_ids = (
@@ -557,6 +565,10 @@ def bearer_save_view(request):
         if not is_bearer_verified(request, bearer_id):
             return _permission_denied_json('Search for this bearer by phone first.')
         instance = get_object_or_404(Bearer, pk=bearer_id)
+        if not is_bearer_editable(request.user, instance):
+            return _permission_denied_json(
+                "This bearer's submission has already been saved and exited, and can no longer be edited."
+            )
 
     form = BearerForm(request.POST, instance=instance)
     if not form.is_valid():
@@ -605,6 +617,10 @@ def submission_save_view(request):
         # overwritten onto someone else's record.
         if int(bearer_id) != existing_submission.bearer_id:
             return _permission_denied_json("A submission's bearer cannot be changed.")
+        if not is_submission_editable(request.user, existing_submission):
+            return _permission_denied_json(
+                'This submission has already been saved and exited, and can no longer be edited.'
+            )
     else:
         denied = _require_perm(
             request, 'passports.add_passportsubmission', 'You do not have permission to add submissions.'
@@ -639,6 +655,11 @@ def submission_save_view(request):
             # rather than creating a duplicate.
             existing = PassportSubmission.objects.filter(bearer=bearer, season=season).first()
             if existing:
+                if not is_submission_editable(request.user, existing):
+                    return _permission_denied_json(
+                        'This bearer already has a submission this season, and it has already been '
+                        'saved and exited — it can no longer be edited.'
+                    )
                 matched_existing = True
                 with transaction.atomic():
                     existing.date_received = date_received
@@ -669,6 +690,13 @@ def submission_save_view(request):
             {'ok': False, 'errors': {'bearer_id': ['This bearer already has a different submission this season.']}},
             status=400,
         )
+
+    # Save & Exit closes this submission out for good — see
+    # access.is_submission_editable/is_bearer_editable, which a Logger
+    # (but not a Site Admin/superuser) is held to from now on.
+    if request.POST.get('exit') == 'true' and submission.locked_at is None:
+        submission.locked_at = timezone.now()
+        submission.save(update_fields=['locked_at'])
 
     return JsonResponse(
         {

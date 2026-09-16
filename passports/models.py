@@ -215,6 +215,15 @@ class PassportSubmission(models.Model):
         help_text="Anomalies, e.g. ambiguous stamp, duplicate cafe stamps.",
     )
 
+    locked_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Set the first time a Passport Logger saves this submission and "
+        "exits the intake form. A locked submission — and its bearer — can no "
+        "longer be edited by a Logger, only by a Site Admin or superuser; see "
+        "access.is_submission_editable/is_bearer_editable.",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

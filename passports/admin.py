@@ -2,7 +2,13 @@ from django.contrib import admin
 from django.shortcuts import redirect
 from simple_history.admin import SimpleHistoryAdmin
 
-from .access import is_bearer_verified, is_site_admin, mark_bearer_verified
+from .access import (
+    is_bearer_editable,
+    is_bearer_verified,
+    is_site_admin,
+    is_submission_editable,
+    mark_bearer_verified,
+)
 from .models import (
     Bearer,
     EmailCampaign,
@@ -117,7 +123,9 @@ class BearerAdmin(SimpleHistoryAdmin):
     def has_change_permission(self, request, obj=None):
         if not super().has_change_permission(request, obj):
             return False
-        return is_bearer_verified(request, obj.pk) if obj else True
+        if obj is None:
+            return True
+        return is_bearer_verified(request, obj.pk) and is_bearer_editable(request.user, obj)
 
 
 @admin.register(PassportSubmission)
@@ -161,6 +169,13 @@ class PassportSubmissionAdmin(SimpleHistoryAdmin):
 
     def has_add_permission(self, request):
         return False
+
+    def has_change_permission(self, request, obj=None):
+        if not super().has_change_permission(request, obj):
+            return False
+        if obj is None:
+            return True
+        return is_submission_editable(request.user, obj)
 
 
 @admin.register(RaffleExport)

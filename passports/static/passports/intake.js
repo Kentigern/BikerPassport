@@ -322,6 +322,7 @@
       venues_stamped: checkedIds,
       date_received: dateReceivedField.value,
       notes: notesField.value,
+      exit: exit ? 'true' : 'false',
     }).then(function (result) {
       if (result.data.ok) {
         submissionIdField.value = result.data.submission_id;
@@ -338,9 +339,13 @@
           window.location = '/passports/submissions/new/';
         }
       } else {
+        var messages = [];
+        Object.keys(result.data.errors || {}).forEach(function (field) {
+          result.data.errors[field].forEach(function (msg) { messages.push(msg); });
+        });
         venueSaveStatuses.forEach(function (el) {
           el.className = 'venue-save-status status-error';
-          el.textContent = 'Could not save — please try again.';
+          el.textContent = messages.length ? messages.join(' ') : 'Could not save — please try again.';
         });
       }
     });

@@ -12,6 +12,8 @@ the one actually administering it — see SPEC.md §5.2."""
 from django.contrib.auth.models import Permission
 from django.db.models import Q
 
+from .models import Season
+
 
 def mark_bearer_verified(request, bearer_id):
     verified = set(request.session.get('verified_bearer_ids', []))
@@ -30,6 +32,36 @@ def is_bearer_verified(request, bearer_id):
     except (TypeError, ValueError):
         return False
     return bearer_id in request.session.get('verified_bearer_ids', [])
+
+
+def _is_privileged(user):
+    return user.is_superuser or is_site_admin(user)
+
+
+def is_submission_editable(user, submission):
+    """A submission becomes read-only to a Passport Logger the first time it
+    is saved & exited (PassportSubmission.locked_at gets set by
+    submission_save_view) — even a later visit that would otherwise add more
+    stamps to the same bearer's season record is blocked once that's
+    happened. Site Admins and superusers are exempt, same tier as the other
+    checks in this module."""
+    if _is_privileged(user):
+        return True
+    return submission.locked_at is None
+
+
+def is_bearer_editable(user, bearer):
+    """A bearer's own details follow their current season's submission lock
+    (see is_submission_editable) — once that submission has been saved &
+    exited, a Logger can no longer edit the bearer either. A bearer with no
+    submission yet this season (a brand-new entry, or a returning bearer in
+    a new season) is unaffected."""
+    if _is_privileged(user):
+        return True
+    season = Season.objects.current()
+    if season is None:
+        return True
+    return not bearer.submissions.filter(season=season, locked_at__isnull=False).exists()
 
 
 def is_site_admin(user):
