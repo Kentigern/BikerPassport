@@ -518,19 +518,29 @@ def audit_log_view(request):
 @staff_member_required
 def submission_form_view(request, pk=None):
     submission = get_object_or_404(PassportSubmission, pk=pk) if pk else None
+    read_only = False
 
     if submission is None:
         if not request.user.has_perm('passports.add_passportsubmission'):
             raise PermissionDenied
     else:
-        if not request.user.has_perm('passports.change_passportsubmission'):
-            raise PermissionDenied
         if not is_bearer_verified(request, submission.bearer_id):
             raise PermissionDenied
-        if not is_submission_editable(request.user, submission):
+        # A locked submission (see access.is_submission_editable) isn't a
+        # reason to block a Logger outright — they still legitimately need
+        # to look up what was already entered (e.g. finding it again via
+        # search) — so this falls back to view-only access instead of a
+        # flat 403. Site Admins/superusers hit is_submission_editable's own
+        # exemption and never see this branch as read-only.
+        read_only = not is_submission_editable(request.user, submission)
+        required_perm = 'passports.view_passportsubmission' if read_only else 'passports.change_passportsubmission'
+        if not request.user.has_perm(required_perm):
             raise PermissionDenied
 
     bearer_form = BearerForm(instance=submission.bearer if submission else None)
+    if read_only:
+        for field in bearer_form.fields.values():
+            field.disabled = True
     checked_ids = (
         set(submission.venues_stamped.values_list('pk', flat=True)) if submission else set()
     )
@@ -543,6 +553,7 @@ def submission_form_view(request, pk=None):
             'venues': Venue.objects.filter(is_active=True),
             'checked_ids': checked_ids,
             'today': timezone.localdate().isoformat(),
+            'read_only': read_only,
         },
     )
 

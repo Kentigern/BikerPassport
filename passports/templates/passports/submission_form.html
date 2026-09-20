@@ -136,7 +136,11 @@
 
 <a class="dashboard-back" href="{% url dashboard_url_name %}">&larr; Back to Dashboard</a>
 
-<h1>{% if submission %}Edit submission #{{ submission.intake_number }}{% else %}New submission{% endif %}</h1>
+<h1>{% if submission %}{% if read_only %}Viewing{% else %}Edit{% endif %} submission #{{ submission.intake_number }}{% else %}New submission{% endif %}</h1>
+
+{% if read_only %}
+<p class="corner-snip-note">This submission has already been saved and exited, so it's shown here read-only — only a Site Admin can make further changes.</p>
+{% endif %}
 
 <fieldset>
   <legend>Bearer</legend>
@@ -164,7 +168,7 @@
     {{ field }}
   {% endfor %}
 
-  <button type="button" id="bearer-save-btn">Save bearer</button>
+  <button type="button" id="bearer-save-btn" {% if read_only %}disabled{% endif %}>Save bearer</button>
   <p id="bearer-save-status" aria-live="polite"></p>
 </fieldset>
 
@@ -175,12 +179,12 @@
   </div>
 
   <label for="id_date_received">Date received</label>
-  <input type="date" id="id_date_received" value="{% if submission %}{{ submission.date_received|date:'Y-m-d' }}{% else %}{{ today }}{% endif %}">
+  <input type="date" id="id_date_received" value="{% if submission %}{{ submission.date_received|date:'Y-m-d' }}{% else %}{{ today }}{% endif %}" {% if read_only %}disabled{% endif %}>
 </fieldset>
 
 <fieldset>
   <legend>Notes</legend>
-  <textarea id="id_notes" rows="2" placeholder="Anomalies, e.g. ambiguous stamp, duplicate cafe stamps">{% if submission %}{{ submission.notes }}{% endif %}</textarea>
+  <textarea id="id_notes" rows="2" placeholder="Anomalies, e.g. ambiguous stamp, duplicate cafe stamps" {% if read_only %}disabled{% endif %}>{% if submission %}{{ submission.notes }}{% endif %}</textarea>
 </fieldset>
 
 <fieldset>
@@ -189,8 +193,8 @@
   <div id="stamp-summary">Stamps: <span id="stamp-count">0</span> — Raffle tickets: <span id="raffle-tickets">0</span></div>
 
   <div class="venue-toolbar">
-    <button type="button" class="venue-save-btn" data-exit="false" {% if not submission %}disabled title="Save the bearer above first"{% endif %}>Save</button>
-    <button type="button" class="venue-save-btn" data-exit="true" {% if not submission %}disabled title="Save the bearer above first"{% endif %}>Save &amp; Exit</button>
+    <button type="button" class="venue-save-btn" data-exit="false" {% if not submission %}disabled title="Save the bearer above first"{% elif read_only %}disabled title="Already saved and exited — read-only"{% endif %}>Save</button>
+    <button type="button" class="venue-save-btn" data-exit="true" {% if not submission %}disabled title="Save the bearer above first"{% elif read_only %}disabled title="Already saved and exited — read-only"{% endif %}>Save &amp; Exit</button>
     <p class="venue-save-status" aria-live="polite"></p>
   </div>
 
@@ -203,7 +207,7 @@
   <input type="text" id="venue-filter" autocomplete="off" placeholder="Type a name or number">
 
   <div id="book-pagination">
-    <label id="book-select-all-label"><input type="checkbox" id="book-select-all" {% if not submission %}disabled{% endif %}> Select all on this page</label>
+    <label id="book-select-all-label"><input type="checkbox" id="book-select-all" {% if not submission or read_only %}disabled{% endif %}> Select all on this page</label>
     <button type="button" id="book-prev-btn">&larr; Prev</button>
     <span id="book-page-indicator"></span>
     <button type="button" id="book-next-btn">Next &rarr;</button>
@@ -212,17 +216,19 @@
   <div id="venue-list">
     {% for venue in venues %}
       <label class="venue-row" data-search="{{ venue.number }} {{ venue.name|lower }}" data-page-group="{{ venue.page_group }}">
-        <input type="checkbox" value="{{ venue.pk }}" {% if venue.pk in checked_ids %}checked{% endif %} {% if not submission %}disabled{% endif %}>
+        <input type="checkbox" value="{{ venue.pk }}" {% if venue.pk in checked_ids %}checked{% endif %} {% if not submission or read_only %}disabled{% endif %}>
         <span class="venue-badge">{{ venue.number }}</span><span class="venue-name">{{ venue.name }}</span>
       </label>
     {% endfor %}
   </div>
 
   <div class="venue-toolbar">
-    <button type="button" class="venue-save-btn" data-exit="false" {% if not submission %}disabled title="Save the bearer above first"{% endif %}>Save</button>
-    <button type="button" class="venue-save-btn" data-exit="true" {% if not submission %}disabled title="Save the bearer above first"{% endif %}>Save &amp; Exit</button>
+    <button type="button" class="venue-save-btn" data-exit="false" {% if not submission %}disabled title="Save the bearer above first"{% elif read_only %}disabled title="Already saved and exited — read-only"{% endif %}>Save</button>
+    <button type="button" class="venue-save-btn" data-exit="true" {% if not submission %}disabled title="Save the bearer above first"{% elif read_only %}disabled title="Already saved and exited — read-only"{% endif %}>Save &amp; Exit</button>
     <p class="venue-save-status" aria-live="polite"></p>
+    {% if not read_only %}
     <p class="corner-snip-note">Once saved, remember to snip a corner off the passport before returning it to the bearer — this is how we avoid the same passport being counted twice.</p>
+    {% endif %}
   </div>
 </fieldset>
 

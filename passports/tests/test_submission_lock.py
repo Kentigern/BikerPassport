@@ -33,9 +33,14 @@ def test_logger_can_keep_saving_before_exit_but_locked_after(season, venues, liv
     exit_btn.click()
     page.wait_for_url(f'{live_server.url}/passports/submissions/new/')
 
+    # A locked submission is still viewable by a Logger (e.g. finding it
+    # again via search) -- just read-only, not a flat 403.
     edit_url = f'{live_server.url}/passports/submissions/{submission_id}/edit/'
     response = page.request.get(edit_url)
-    assert response.status == 403
+    assert response.status == 200
+    body = response.text()
+    assert 'read-only' in body
+    assert 'disabled' in body
 
 
 def test_superuser_can_still_edit_after_exit(season, venues, live_server, logged_in_page):
@@ -58,6 +63,37 @@ def test_superuser_can_still_edit_after_exit(season, venues, live_server, logged
     edit_url = f'{live_server.url}/passports/submissions/{submission_id}/edit/'
     response = page.request.get(edit_url)
     assert response.status == 200
+
+
+def test_locked_submission_is_read_only_not_403_for_logger(client, season, logger_user):
+    bearer = Bearer.objects.create(
+        name='Read Only Bearer', phone='+447700100013', mailing_address='1 Test Street'
+    )
+    submission = PassportSubmission.objects.create(
+        season=season,
+        bearer=bearer,
+        intake_number=1,
+        date_received=timezone.localdate(),
+        status=PassportSubmission.Status.ENTERED,
+        locked_at=timezone.now(),
+    )
+
+    client.force_login(logger_user)
+    session = client.session
+    session['verified_bearer_ids'] = [bearer.pk]
+    session.save()
+
+    resp = client.get(f'/passports/submissions/{submission.pk}/edit/')
+    assert resp.status_code == 200
+    assert b'disabled' in resp.content
+
+    # Read-only access to the page doesn't reopen the write endpoints --
+    # those still enforce the lock themselves.
+    resp = client.post(
+        '/passports/submissions/save/',
+        data={'bearer_id': bearer.pk, 'submission_id': submission.pk, 'notes': 'changed'},
+    )
+    assert resp.status_code == 403
 
 
 def test_raw_admin_blocks_edits_to_locked_records_for_logger(client, season, logger_user):
