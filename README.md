@@ -129,4 +129,5 @@ Email: the confirmation email and staff alerts go through [Resend](https://resen
 - [docs/krystal_migration.md](docs/krystal_migration.md) — deploying to Krystal (production) and the domain cutover
 - [scripts/transfer_reference_data.txt](scripts/transfer_reference_data.txt) — copy users/groups/seasons/venues between sites
 - [scripts/loadtest/](scripts/loadtest/) — concurrent-volunteer load test (staging only)
+- `scripts/fix_claude_path.bat` — double-click fix for "Could not locate the Claude CLI" on Windows
 - Management commands worth knowing: `retry_confirmation_emails`, `issue_raffle_tickets`, `load_venues`, `seed_demo_data`, `loadtest_fixtures`
