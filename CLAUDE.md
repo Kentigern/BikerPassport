@@ -89,7 +89,9 @@ Tested live on Railway: confirmation email end to end (Resend, verified sender),
 failed-send → admin resend, ticket backfill (106 tickets, contiguous). Tested only
 locally (automated + screenshots): no-email Save & Exit tickets, bulk retry, export,
 draw with issued numbers, notes alert, public message page, 10s timeout, data-transfer
-matching. Nothing tested on Krystal yet. In progress 2026-09-23: live Railway checks
+matching. Nothing tested on Krystal yet. Raffle CSV export no longer includes the
+mailing address (multi-line addresses broke it in spreadsheets; the live draw is the
+real raffle, the export is a backup). In progress 2026-09-23: live Railway checks
 of no-email exit, notes alert, export and draw.
 
 Day 1 MVP — remaining, in order (Day 1 may be brought forward at short notice):

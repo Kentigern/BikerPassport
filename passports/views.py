@@ -188,9 +188,9 @@ def dashboard_view(request):
 def raffle_export_view(request):
     """CSV raffle draw list — one row per issued ticket (RaffleTicket), in
     ticket-number order, so each row's number is the same one its bearer
-    was sent in their confirmation email. Mirrors the legacy
-    MARK_Entries.py tool's output shape, adapted to our actual Bearer
-    fields (a single mailing_address, not separate address lines).
+    was sent in their confirmation email. No mailing address: multi-line
+    addresses broke the CSV in spreadsheets, and the live draw (not this
+    export) is how the raffle is actually run.
 
     Real prizes are on the line, so this is POST-only (it can issue any
     still-missing ticket numbers first — see issue_missing_for_season)
@@ -205,7 +205,7 @@ def raffle_export_view(request):
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
 
     writer = csv.writer(response)
-    writer.writerow(['Ticket Number', 'Name', 'Email', 'Phone', 'Mailing Address'])
+    writer.writerow(['Ticket Number', 'Name', 'Email', 'Phone'])
 
     if season is not None:
         RaffleTicket.objects.issue_missing_for_season(season)
@@ -213,7 +213,7 @@ def raffle_export_view(request):
         entry_count = 0
         for ticket in tickets:
             bearer = ticket.submission.bearer
-            writer.writerow([ticket.number, bearer.name, bearer.email, bearer.phone, bearer.mailing_address])
+            writer.writerow([ticket.number, bearer.name, bearer.email, bearer.phone])
             entry_count += 1
 
         RaffleExport.objects.create(

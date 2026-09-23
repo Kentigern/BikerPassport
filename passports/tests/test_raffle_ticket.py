@@ -122,7 +122,7 @@ class TestRaffleUsesIssuedNumbers:
         resp = client.post(reverse('raffle_export'))
 
         rows = list(csv.reader(io.StringIO(resp.content.decode())))
-        assert rows[0][0] == 'Ticket Number'
+        assert rows[0] == ['Ticket Number', 'Name', 'Email', 'Phone']  # no mailing address
         assert [row[0] for row in rows[1:]] == issued
         assert all(row[1] == 'Exported Bearer' for row in rows[1:])
 
