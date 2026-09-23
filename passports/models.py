@@ -478,3 +478,26 @@ class EmailCampaignRecipient(models.Model):
 
     def __str__(self):
         return f"{self.bearer} — {self.campaign} — {self.get_status_display()}"
+
+
+class PublicMessage(models.Model):
+    """A text-only message sent by an unauthenticated visitor from the
+    public /message/ page (off unless settings.PUBLIC_MESSAGES_ENABLED).
+    Stored here as the record, and emailed to
+    settings.PUBLIC_MESSAGE_ALERT_EMAILS. Deliberately minimal: no files,
+    no HTML, no IP address kept."""
+
+    name = models.CharField(max_length=100, blank=True)
+    reply_to = models.CharField(
+        max_length=200, blank=True, help_text="Email or phone the sender gave for a reply (optional)."
+    )
+    message = models.TextField(max_length=2000)
+    created_at = models.DateTimeField(auto_now_add=True)
+    alert_sent = models.BooleanField(default=False, help_text="Whether the staff alert email went out.")
+    handled = models.BooleanField(default=False, help_text="Tick once someone has dealt with this message.")
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.name or 'Anonymous'} — {self.created_at:%Y-%m-%d %H:%M}"

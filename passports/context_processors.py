@@ -1,3 +1,5 @@
+from django.conf import settings
+
 from .access import is_site_admin
 
 
@@ -12,3 +14,9 @@ def dashboard_link(request):
     if user.is_superuser or is_site_admin(user):
         return {'dashboard_url_name': 'dashboard'}
     return {'dashboard_url_name': 'landing'}
+
+
+def public_messages(request):
+    """Lets the admin login page (templates/admin/base_site.html) show the
+    "Contact the organisers" link only while the public page is enabled."""
+    return {'public_messages_enabled': settings.PUBLIC_MESSAGES_ENABLED}

@@ -109,6 +109,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'passports.context_processors.dashboard_link',
+                'passports.context_processors.public_messages',
             ],
         },
     },
@@ -213,6 +214,19 @@ DEFAULT_FROM_EMAIL = os.environ.get('DJANGO_DEFAULT_FROM_EMAIL', 'noreply@passpo
 # the submission confirmation email (§5.3); see passports/resend_client.py.
 # Blank in dev, where resend_client logs instead of calling the real API.
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
+
+# Staff alert recipients (comma-separated). Blank = that alert is off.
+# NOTES: a submission Save & Exited with something in its Notes field.
+NOTES_ALERT_EMAILS = [e.strip() for e in os.environ.get('DJANGO_NOTES_ALERT_EMAILS', '').split(',') if e.strip()]
+# PUBLIC_MESSAGE: a message sent from the public /message/ page.
+PUBLIC_MESSAGE_ALERT_EMAILS = [
+    e.strip() for e in os.environ.get('DJANGO_PUBLIC_MESSAGE_ALERT_EMAILS', '').split(',') if e.strip()
+]
+
+# The public, no-login /message/ page (passports.views.public_message_view)
+# — off unless explicitly turned on: it's the one page anyone on the
+# internet can write to, so enabling it is a deliberate decision.
+PUBLIC_MESSAGES_ENABLED = os.environ.get('DJANGO_PUBLIC_MESSAGES_ENABLED', 'False') == 'True'
 
 # Bulk-email links (unsubscribe) need a real absolute URL and are built
 # outside of any request (a background send has no request to derive one

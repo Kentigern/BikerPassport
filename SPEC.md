@@ -129,6 +129,16 @@ Realizes the purpose-specific marketing consent idea from §11.2: Site Admins ca
 - Every sent email carries a one-click, no-login **unsubscribe** link specific to that consent purpose (reusing the same consent-token mechanism as §5.6, rather than a separate token), and every send is logged in the audit log (§5.8).
 - Deliberately minimal for this first version: one shared version of the email for every recipient (no per-bearer merge fields yet), no scheduling, and no open/click tracking.
 
+### 5.11 Staff alert emails
+
+Short internal emails, via Resend, to a configurable staff list (blank list = alert off). Best-effort: an alert failing never blocks the action that triggered it.
+- **Submission notes** (`DJANGO_NOTES_ALERT_EMAILS`) — when a submission is Save & Exited with anything in its Notes field (anomalies: ambiguous stamps, duplicates, damage), staff get the note plus context: intake number, season, bearer name, stamps/tickets, date received, who logged it, when, and a link to the submission in the admin. Sent once, at Save & Exit — not on intermediate saves, and not for later Site Admin edits.
+- **Public messages** (`DJANGO_PUBLIC_MESSAGE_ALERT_EMAILS`) — see §5.12.
+
+### 5.12 Public "Contact the organisers" page
+
+The one page usable without logging in: `/message/`, linked from the login page ("Not a volunteer? Contact the organisers"). **Off by default** (`DJANGO_PUBLIC_MESSAGES_ENABLED`), since it's the only page anyone on the internet can write to. Fields: name (optional), email/phone for a reply (optional), message (required, plain text, up to 2,000 characters). Each message is stored (`PublicMessage`, visible in the admin, where staff tick "handled") and emailed to the staff list. No IP address or other tracking data is stored. Abuse controls: a hidden honeypot field, a signed form timestamp (too fast or forged = bot), and hourly rate limits per sender and overall, so the page can never generate more than a small, fixed amount of mail. Bot submissions are dropped silently.
+
 ## 6. Non-Functional Requirements
 
 - **Scale:** seasonal and bursty but not small — up to 5,000 submissions over a 6-week window (§3), entered by up to 30 volunteers working concurrently. The app needs to comfortably handle ~30 simultaneous logged-in data-entry sessions; this is still a modest load for any conventional web framework/database, but it rules out a single-writer datastore (see §7 database row).

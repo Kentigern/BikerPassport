@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact the organisers — Bike + Brew</title>
+  <link rel="icon" href="https://makeyourmark.co.uk/wp-content/uploads/2025/08/MARK-Favicon-100x100.png">
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      background: #2B2727;
+      color: #efdaa4;
+      display: flex;
+      justify-content: center;
+    }
+    .card {
+      width: 100%;
+      max-width: 34rem;
+      padding: 2.5rem 1rem 4rem;
+      box-sizing: border-box;
+    }
+    h1 { font-size: 1.4rem; margin: 0 0 .4rem; }
+    .intro { color: #c9b998; margin: 0 0 1.75rem; line-height: 1.5; }
+    label { display: block; font-weight: bold; margin: 1rem 0 .35rem; font-size: .95rem; }
+    input[type=text], textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: .65rem .8rem;
+      font: inherit;
+      border-radius: 6px;
+      border: 1px solid #665f5f;
+      background: #3a3535;
+      color: #efdaa4;
+    }
+    textarea { resize: vertical; }
+    .hint { color: #a89a7d; font-size: .85rem; margin-top: .3rem; }
+    .errorlist { color: #e6a3a3; list-style: none; padding: 0; margin: .3rem 0 0; font-size: .9rem; }
+    .error-box { background: rgba(230, 163, 163, .12); color: #e6a3a3; padding: .75rem 1rem; border-radius: 6px; margin-bottom: 1rem; }
+    button {
+      margin-top: 1.5rem;
+      font-size: 1.05rem;
+      font-weight: bold;
+      padding: .8rem 1.8rem;
+      background: #efdaa4;
+      color: #2B2727;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover { background: #e0c785; }
+    .hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+    .back { display: inline-block; margin-top: 2rem; color: #c9b998; }
+    .hosting-footer { text-align: center; color: #a3906a; font-size: .8rem; margin-top: 3rem; }
+    .hosting-footer a { color: #a3906a; }
+  </style>
+</head>
+<body>
+<div class="card">
+  {% if sent %}
+    <h1>Thank you</h1>
+    <p class="intro">Your message has been sent to the Bike + Brew organisers.</p>
+  {% else %}
+    <h1>Contact the organisers</h1>
+    <p class="intro">Questions about your Bike + Brew passport, stamps or the raffle? Send the organisers a short message. Plain text only.</p>
+
+    {% if error %}<div class="error-box">{{ error }}</div>{% endif %}
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="started" value="{{ started }}">
+
+      <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+      {{ form.name }}
+      {{ form.name.errors }}
+
+      <label for="{{ form.reply_to.id_for_label }}">{{ form.reply_to.label }}</label>
+      {{ form.reply_to }}
+      {{ form.reply_to.errors }}
+
+      <label for="{{ form.message.id_for_label }}">{{ form.message.label }}</label>
+      {{ form.message }}
+      <p class="hint">Up to 2,000 characters.</p>
+      {{ form.message.errors }}
+
+      <div class="hp" aria-hidden="true">
+        <label for="id_website">Leave this empty</label>
+        <input type="text" name="website" id="id_website" tabindex="-1" autocomplete="off">
+      </div>
+
+      <button type="submit">Send message</button>
+    </form>
+  {% endif %}
+
+  <a class="back" href="/">&larr; Volunteer login</a>
+  <p class="hosting-footer">Hosting kindly provided by <a href="https://krystal.io" target="_blank" rel="noopener">Krystal</a></p>
+</div>
+</body>
+</html>

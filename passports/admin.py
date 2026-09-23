@@ -15,6 +15,7 @@ from .models import (
     EmailCampaign,
     EmailCampaignRecipient,
     PassportSubmission,
+    PublicMessage,
     RaffleExport,
     RaffleTicket,
     RaffleWinner,
@@ -226,6 +227,27 @@ class PassportSubmissionAdmin(SimpleHistoryAdmin):
                 f'Only the first {CONFIRMATION_RETRY_BATCH_LIMIT} were processed this run — run the action again for the rest.',
                 messages.WARNING,
             )
+
+
+@admin.register(PublicMessage)
+class PublicMessageAdmin(admin.ModelAdmin):
+    """Messages from the public /message/ page. Everything the sender wrote
+    is read-only (it's their message, and the record of it); staff only
+    tick `handled` once it's dealt with — straight from the list."""
+
+    list_display = ['created_at', 'name', 'reply_to', 'short_message', 'alert_sent', 'handled']
+    list_editable = ['handled']
+    list_filter = ['handled', 'alert_sent']
+    search_fields = ['name', 'reply_to', 'message']
+    readonly_fields = ['name', 'reply_to', 'message', 'created_at', 'alert_sent']
+    fields = ['created_at', 'name', 'reply_to', 'message', 'alert_sent', 'handled']
+
+    @admin.display(description='Message')
+    def short_message(self, obj):
+        return obj.message if len(obj.message) <= 80 else obj.message[:77] + '…'
+
+    def has_add_permission(self, request):
+        return False
 
 
 @admin.register(RaffleExport)

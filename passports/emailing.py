@@ -89,6 +89,63 @@ def send_submission_confirmation(submission):
     )
 
 
+def send_staff_alert(recipients, *, subject, heading, message_label, message, details, link_url='', link_text=''):
+    """One internal alert email to a staff list (see settings.*_ALERT_EMAILS)
+    — a highlighted message plus label/value context rows. Best-effort by
+    design: an alert failing must never break the action that triggered
+    it, so this logs and swallows errors. Returns whether it sent."""
+    if not recipients:
+        return False
+    html_body = render_to_string(
+        'passports/staff_alert_email.html',
+        {
+            'heading': heading,
+            'message_label': message_label,
+            'message': message,
+            'details': details,
+            'link_url': link_url,
+            'link_text': link_text,
+        },
+    )
+    text_lines = [heading, '', f'{message_label}:', message, '']
+    text_lines += [f'{label}: {value}' for label, value in details]
+    if link_url:
+        text_lines += ['', f'{link_text}: {link_url}']
+    try:
+        resend_client.send_email(to=recipients, subject=subject, html_body=html_body, text_body='\n'.join(text_lines))
+    except Exception:  # noqa: BLE001 — see docstring
+        logger.exception('Staff alert %r failed', subject)
+        return False
+    return True
+
+
+def send_notes_alert(submission):
+    """Tells staff (settings.NOTES_ALERT_EMAILS) about a submission's Notes
+    at Save & Exit — notes flag anomalies (ambiguous stamps, duplicates,
+    damaged passports) someone should follow up, and otherwise sit unseen
+    in the database. Includes enough context to act without searching."""
+    entered_by = submission.entered_by
+    admin_path = reverse('admin:passports_passportsubmission_change', args=[submission.pk])
+    return send_staff_alert(
+        settings.NOTES_ALERT_EMAILS,
+        subject=f'Passport note — intake #{submission.intake_number} ({submission.season})',
+        heading='A passport was logged with a note',
+        message_label='Note',
+        message=submission.notes.strip(),
+        details=[
+            ('Intake number', f'#{submission.intake_number}'),
+            ('Season', str(submission.season)),
+            ('Bearer', submission.bearer.name),
+            ('Stamps / tickets', f'{submission.stamp_count} stamps, {submission.raffle_tickets} raffle tickets'),
+            ('Date received', submission.date_received.strftime('%d %b %Y') if hasattr(submission.date_received, 'strftime') else str(submission.date_received)),
+            ('Logged by', (entered_by.get_full_name() or entered_by.username) if entered_by else '—'),
+            ('Saved & exited', timezone.localtime(submission.locked_at).strftime('%d %b %Y %H:%M') if submission.locked_at else '—'),
+        ],
+        link_url=f'{settings.PUBLIC_BASE_URL}{admin_path}',
+        link_text='Open this submission in the admin',
+    )
+
+
 def send_and_record_confirmation(submission):
     """Sends the confirmation email and records the outcome on the
     submission — emailed + email_sent_at on success, email_send_failed on

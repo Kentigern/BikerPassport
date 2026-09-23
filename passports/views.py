@@ -23,7 +23,13 @@ from .access import (
     is_submission_editable,
     mark_bearer_verified,
 )
-from .emailing import qualifying_bearers, send_and_record_confirmation, send_campaign, snapshot_recipients
+from .emailing import (
+    qualifying_bearers,
+    send_and_record_confirmation,
+    send_campaign,
+    send_notes_alert,
+    snapshot_recipients,
+)
 from .forms import BearerForm
 from .models import (
     Bearer,
@@ -707,6 +713,11 @@ def submission_save_view(request):
 
     if just_locked and submission.bearer.email:
         send_and_record_confirmation(submission)
+
+    # Anything in Notes is an anomaly someone should follow up — tell staff
+    # once, when the Logger finishes (not on every intermediate save).
+    if just_locked and submission.notes.strip():
+        send_notes_alert(submission)
 
     return JsonResponse(
         {

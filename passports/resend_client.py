@@ -22,9 +22,11 @@ resend.default_http_client = resend.RequestsClient(timeout=RESEND_TIMEOUT_SECOND
 
 
 def send_email(*, to, subject, html_body, text_body):
-    """Sends one email via Resend. Raises on failure — callers are
-    responsible for catching that and recording it (see
-    PassportSubmission.email_send_failed)."""
+    """Sends one email via Resend — `to` is one address or a list (all
+    recipients see each other, fine for internal staff alerts). Raises on
+    failure — callers are responsible for catching that and recording it
+    (see PassportSubmission.email_send_failed)."""
+    to = [to] if isinstance(to, str) else list(to)
     if not settings.RESEND_API_KEY:
         logger.info('RESEND_API_KEY not set — logging email instead of sending.\nTo: %s\nSubject: %s\n\n%s', to, subject, text_body)
         return
@@ -33,7 +35,7 @@ def send_email(*, to, subject, html_body, text_body):
     resend.Emails.send(
         {
             'from': settings.DEFAULT_FROM_EMAIL,
-            'to': [to],
+            'to': to,
             'subject': subject,
             'html': html_body,
             'text': text_body,

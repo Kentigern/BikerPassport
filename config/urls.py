@@ -19,6 +19,7 @@ from django.shortcuts import redirect
 from django.urls import include, path, reverse
 
 from passports.access import is_site_admin
+from passports.public_views import public_message_view
 
 
 def root_redirect(request):
@@ -39,6 +40,7 @@ def root_redirect(request):
 
 urlpatterns = [
     path('', root_redirect),
+    path('message/', public_message_view, name='public_message'),
     path('admin/', admin.site.urls),
     path('passports/', include('passports.urls')),
 ]
