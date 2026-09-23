@@ -149,6 +149,7 @@ def main():
     parser.add_argument('--email', default='',
                         help="Bearer email. Blank (default) skips the confirmation email. 'delivered@resend.dev' "
                              "exercises Resend without real delivery, but still counts toward your Resend quota.")
+    parser.add_argument('--output', help='Also save the summary to this file')
     args = parser.parse_args()
     args.base_url = args.base_url.rstrip('/')
 
@@ -162,22 +163,41 @@ def main():
         threads.append(thread)
         time.sleep(args.ramp / args.users)
     print(f'{args.users} volunteers running against {args.base_url} for {args.minutes:g} min...')
-    for thread in threads:
-        thread.join()
+    while any(thread.is_alive() for thread in threads):
+        time.sleep(1)
+        elapsed = time.time() - started
+        if int(elapsed) % 30 == 0:
+            with lock:
+                done = sum(len(rows) for rows in results.values())
+                failed = sum(errors.values())
+                passports = len(results.get('save & exit', []))
+            print(f'  {elapsed / 60:4.1f} min: {done} requests, {failed} errors, {passports} passports completed', flush=True)
     wall = time.time() - started
 
-    print(f'\n{"step":<18}{"count":>7}{"errors":>8}{"p50 ms":>9}{"p95 ms":>9}{"p99 ms":>9}{"max ms":>9}')
+    lines = [
+        f'Load test: {args.users} volunteers, {args.minutes:g} min, against {args.base_url}',
+        f'Started {time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(started))}',
+        '',
+        f'{"step":<18}{"count":>7}{"errors":>8}{"p50 ms":>9}{"p95 ms":>9}{"p99 ms":>9}{"max ms":>9}',
+    ]
     total = 0
     for step, rows in results.items():
         times = [t * 1000 for t, _ in rows]
         failed = sum(1 for _, ok in rows if not ok)
         total += len(rows)
-        print(f'{step:<18}{len(rows):>7}{failed:>8}{statistics.median(times):>9.0f}{pct(times, 95):>9.0f}{pct(times, 99):>9.0f}{max(times):>9.0f}')
-    print(f'\n{total} requests in {wall:.0f}s ({total / wall:.1f}/s). Passports completed: {len(results.get("save & exit", []))}.')
+        lines.append(f'{step:<18}{len(rows):>7}{failed:>8}{statistics.median(times):>9.0f}{pct(times, 95):>9.0f}{pct(times, 99):>9.0f}{max(times):>9.0f}')
+    lines.append(f'\n{total} requests in {wall:.0f}s ({total / wall:.1f}/s). Passports completed: {len(results.get("save & exit", []))}.')
     if errors:
-        print('\nErrors:')
+        lines.append('\nErrors:')
         for detail, count in sorted(errors.items(), key=lambda kv: -kv[1]):
-            print(f'  {count:>5}  {detail}')
+            lines.append(f'  {count:>5}  {detail}')
+
+    report = '\n'.join(lines)
+    print('\n' + report)
+    if args.output:
+        with open(args.output, 'w', encoding='utf-8') as fh:
+            fh.write(report + '\n')
+        print(f'\nSaved to {args.output}')
 
 
 if __name__ == '__main__':
