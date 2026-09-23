@@ -78,23 +78,27 @@ Browser tests with pytest-playwright against `live_server`.
   so the sender must be `…@passports.makeyourmark.co.uk` (default
   `noreply@passports.makeyourmark.co.uk`). The bare `makeyourmark.co.uk` is NOT verified.
 
-## Current status (2026-09-23)
+## Current status (end of 2026-09-23)
+
+**Next session starts with** [docs/plan_2026-09-24_krystal.md](docs/plan_2026-09-24_krystal.md) (Krystal deploy, config data, email, smoke test).
 
 Done and on Railway: ticket numbers, draw from issued numbers, email retry, notes
 alerts, public message page (off), yellow/black wheel, 10s Resend timeout.
 Repo is set up for two PCs (work + Steve's personal PC, both with Claude Code);
 `scripts/fix_claude_path.bat` fixes a Claude Code install that isn't on PATH.
 
-Tested live on Railway: confirmation email end to end (Resend, verified sender),
-failed-send → admin resend, ticket backfill (106 tickets, contiguous). Tested only
-locally (automated + screenshots): no-email Save & Exit tickets, bulk retry, export,
-draw with issued numbers, notes alert, public message page, 10s timeout, data-transfer
-matching. Nothing tested on Krystal yet. Raffle CSV export no longer includes the
-mailing address (multi-line addresses broke it in spreadsheets; the live draw is the
-real raffle, the export is a backup). In progress 2026-09-23: live Railway checks
-of no-email exit, notes alert, export and draw.
+Tested live on Railway (2026-09-23), all passing: confirmation email end to end
+(Resend, verified sender); failed send → admin resend; ticket backfill; Save & Exit
+with no email (tickets issued, no email); notes alert to staff; raffle CSV export
+(108 rows, ticket number/name/email/phone — mailing address removed because multi-line
+addresses broke it in spreadsheets); live draw revealing the winner's own issued
+ticket. Tested only locally: bulk retry, public message page (off on Railway), 10s
+timeout, data-transfer matching. Nothing tested on Krystal yet. Railway holds one test
+RaffleWinner — clear it (DEBUG-only command won't run there) if Railway becomes the
+Day 1 fallback.
 
-Day 1 MVP — remaining, in order (Day 1 may be brought forward at short notice):
+Day 1 MVP — remaining, in order (Day 1 may be brought forward at short notice).
+Steps 1–4 + smoke test are planned in detail for 24 Sep: [docs/plan_2026-09-24_krystal.md](docs/plan_2026-09-24_krystal.md).
 1. Bring Krystal staging up to date (`git pull`, `migrate`, `collectstatic`, restart app).
 2. Copy users/groups/seasons/venues Railway → Krystal: `scripts/transfer_reference_data.txt`.
 3. Krystal `.env`: `RESEND_API_KEY`, `DJANGO_DEFAULT_FROM_EMAIL`, alert email lists; send a test.
