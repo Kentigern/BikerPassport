@@ -15,11 +15,26 @@ class SeasonManager(models.Manager):
     def current(self):
         return self.filter(is_current=True).first() or self.order_by('-name').first()
 
+    def get_by_natural_key(self, name):
+        return self.get(name=name)
+
+
+class VenueManager(models.Manager):
+    def get_by_natural_key(self, number):
+        return self.get(number=number)
+
 
 class Season(models.Model):
     """A year's Bike + Brew program (§4). Each season has its own submissions."""
 
     objects = SeasonManager()
+
+    # Natural keys let `dumpdata --natural-primary` / `loaddata` move seasons
+    # and venues between databases by name/number instead of by id — so
+    # loading into a database that already has them updates the existing
+    # rows rather than clashing (see scripts/transfer_reference_data.txt).
+    def natural_key(self):
+        return (self.name,)
 
     name = models.CharField(max_length=20, unique=True, help_text="e.g. '2026'.")
     is_current = models.BooleanField(
@@ -61,6 +76,11 @@ class Season(models.Model):
 class Venue(models.Model):
     """A numbered stamp location on the passport (§4). Not every venue is strictly
     a cafe — kept extensible for the possible future CRM use noted in §11.1."""
+
+    objects = VenueManager()
+
+    def natural_key(self):
+        return (self.number,)
 
     number = models.PositiveSmallIntegerField(unique=True, help_text="Passport number, 1-296.")
     name = models.CharField(max_length=200)

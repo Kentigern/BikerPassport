@@ -1,0 +1,87 @@
+TRANSFER REFERENCE DATA: Railway (test) -> Krystal (production)
+==============================================================
+
+Copies staff Users, Groups (with their permissions), each user's group
+memberships, Seasons and Venues. Nothing else: no bearers, submissions,
+raffle tickets or messages.
+
+Rows are matched by username / group name / season name / venue number,
+not by internal id. Anything that already exists on Krystal is UPDATED to
+match Railway (including a matching user's password); anything missing is
+added; anything only on Krystal is left alone. loaddata runs as a single
+transaction, so if anything fails, nothing is changed.
+
+The export file contains staff password hashes. Treat it like a password
+file: don't email it, and delete it from both machines when done.
+
+
+0. PREREQUISITES
+----------------
+- Both sites run the same code (commit "natural keys for Season/Venue" or
+  later). Railway deploys from master automatically. On Krystal (SSH):
+
+      cd ~/bikerpassport
+      source <virtualenv activate path from cPanel "Setup Python App">
+      git pull
+      python manage.py migrate
+      python manage.py collectstatic --noinput
+
+  then Restart the app in cPanel "Setup Python App".
+
+- On your PC: the Railway CLI, logged in and linked to the "Make Your Mark"
+  project (railway status shows it), run from the repo folder.
+
+
+1. PRE-CHECK KRYSTAL (SSH, in ~/bikerpassport with the venv active)
+-------------------------------------------------------------------
+    python manage.py shell -c "from django.contrib.auth.models import User, Group; from passports.models import Season, Venue; print('users', list(User.objects.values_list('username', flat=True))); print('groups', list(Group.objects.values_list('name', flat=True))); print('seasons', list(Season.objects.values_list('name', 'is_current'))); print('venues', Venue.objects.count())"
+
+Look for two things:
+- A CURRENT season on Krystal with a different name from Railway's current
+  season. Only one season can be current, so the load would fail (safely,
+  with nothing changed). Untick is_current on Krystal's first, in the admin.
+- A Krystal username that also exists on Railway, e.g. the temporary
+  superuser from setup. It will take Railway's password and settings.
+
+
+2. EXPORT FROM RAILWAY (your PC)
+--------------------------------
+Use Command Prompt or Git Bash, NOT PowerShell. PowerShell's ">" writes
+UTF-16, which loaddata can't read.
+
+    railway ssh -- python manage.py dumpdata auth.group auth.user passports.season passports.venue --natural-foreign --natural-primary --indent 2 > reference_data.json
+
+Check it (should print the counts, e.g. 3 groups, N users, 1 season, 296 venues):
+
+    python -c "import json,collections; print(collections.Counter(o['model'] for o in json.load(open('reference_data.json'))))"
+
+
+3. UPLOAD TO KRYSTAL
+--------------------
+cPanel > File Manager > bikerpassport > Upload > reference_data.json
+(or: scp reference_data.json <user>@<krystal-host>:~/bikerpassport/)
+
+
+4. LOAD ON KRYSTAL (SSH, in ~/bikerpassport with the venv active)
+-----------------------------------------------------------------
+    python manage.py loaddata reference_data.json
+
+Expect "Installed N object(s) from 1 fixture(s)". Then delete the file:
+
+    rm reference_data.json
+
+and delete reference_data.json from your PC too.
+
+(No SSH? cPanel "Setup Python App" > "Execute python script" can run
+manage.py loaddata reference_data.json as well.)
+
+
+5. VERIFY
+---------
+- Log in to the Krystal site with a real staff account (its Railway password).
+- Admin > Venues shows 296; Admin > Seasons shows the right current season.
+- Admin > Groups > Passport Logger / Site Admin have their permissions.
+- Log in as a Passport Logger: you land on the Logger Dashboard, not an error.
+- Re-run step 1's pre-check to see the final lists.
+
+Running it again later is safe: it just re-syncs to Railway's current data.
