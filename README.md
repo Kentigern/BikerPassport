@@ -3,6 +3,11 @@
 Internal staff tool for Make Your Mark's annual Bike + Brew fundraiser — see
 [SPEC.md](SPEC.md) for the full specification.
 
+**Picking this up on a new PC or in a new Claude Code session?** Start with
+[CLAUDE.md](CLAUDE.md) — project context, hosting, current status and next
+steps — then follow Setup below. Production migration runbook:
+[docs/krystal_migration.md](docs/krystal_migration.md).
+
 Repository: https://github.com/Kentigern/BikerPassport
 
 ## Requirements
@@ -20,13 +25,15 @@ Repository: https://github.com/Kentigern/BikerPassport
    source .venv/bin/activate   # macOS/Linux
    ```
 
-2. Install dependencies:
+2. Install dependencies (`requirements-dev.txt` includes everything in
+   `requirements.txt` plus the test tools):
 
    ```sh
-   pip install -r requirements.txt
+   pip install -r requirements-dev.txt
+   python -m playwright install chromium   # one-time, for the browser tests
    ```
 
-3. Copy the environment template and adjust as needed (defaults are fine for local dev — SQLite database, console email backend):
+3. Copy the environment template and adjust as needed (defaults are fine for local dev — SQLite database, and with `RESEND_API_KEY` blank no email is really sent: it's written to the log instead):
 
    ```sh
    copy .env.example .env      # Windows
@@ -114,4 +121,12 @@ The app is set up to deploy as-is via Railway's `Procfile`-based build (gunicorn
    python manage.py shell -c "from passports.models import Season; Season.objects.create(name='2026', is_current=True)"
    ```
 
-Email defaults to the console backend (i.e. emails aren't actually sent) unless `DJANGO_EMAIL_*` vars are set — fine for a demo.
+Email: the confirmation email and staff alerts go through [Resend](https://resend.com) — set `RESEND_API_KEY` and `DJANGO_DEFAULT_FROM_EMAIL` (an address on the Resend-verified `passports.makeyourmark.co.uk` subdomain), plus the optional alert lists in `.env.example`. Without a key, emails are only logged. Railway only applies variable changes after a **Deploy/Redeploy**.
+
+## Other docs and tools
+
+- [CLAUDE.md](CLAUDE.md) — working context: business rules, hosting, status, gotchas
+- [docs/krystal_migration.md](docs/krystal_migration.md) — deploying to Krystal (production) and the domain cutover
+- [scripts/transfer_reference_data.txt](scripts/transfer_reference_data.txt) — copy users/groups/seasons/venues between sites
+- [scripts/loadtest/](scripts/loadtest/) — concurrent-volunteer load test (staging only)
+- Management commands worth knowing: `retry_confirmation_emails`, `issue_raffle_tickets`, `load_venues`, `seed_demo_data`, `loadtest_fixtures`
