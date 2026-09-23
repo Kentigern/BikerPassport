@@ -211,11 +211,15 @@ class PassportSubmissionAdmin(SimpleHistoryAdmin):
         the rest (the retry_confirmation_emails command has no cap)."""
         submissions = list(queryset.select_related('bearer')[:CONFIRMATION_RETRY_BATCH_LIMIT + 1])
         remaining = len(submissions) > CONFIRMATION_RETRY_BATCH_LIMIT
-        sent, failed, skipped = send_confirmations(submissions[:CONFIRMATION_RETRY_BATCH_LIMIT])
+        sent, failures, skipped = send_confirmations(submissions[:CONFIRMATION_RETRY_BATCH_LIMIT])
 
-        self.message_user(request, f'Confirmation emails: {sent} sent, {failed} failed, {skipped} skipped (not yet Save & Exited, or no email on file).')
-        if failed:
-            self.message_user(request, f'{failed} still failed — check the bearer\'s email address, then try again.', messages.WARNING)
+        self.message_user(request, f'Confirmation emails: {sent} sent, {len(failures)} failed, {skipped} skipped (not yet Save & Exited, or no email on file).')
+        # Resend's own reason, per submission — a bad address and a sending
+        # misconfiguration (e.g. unverified domain) need very different fixes.
+        for submission, error in failures[:10]:
+            self.message_user(request, f'Intake #{submission.intake_number} failed: {error}', messages.ERROR)
+        if len(failures) > 10:
+            self.message_user(request, f'…and {len(failures) - 10} more — see the application logs.', messages.ERROR)
         if remaining:
             self.message_user(
                 request,

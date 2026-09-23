@@ -5,6 +5,7 @@ supports one) can call directly. See the plan's Context note: the
 *trigger* (currently threading.Thread in views.py) is expected to
 change; this module shouldn't need to."""
 
+import logging
 import time
 
 from django.conf import settings
@@ -16,6 +17,8 @@ from django.utils.html import strip_tags
 
 from . import resend_client
 from .models import Bearer, EmailCampaign, EmailCampaignRecipient, PassportSubmission, RaffleTicket
+
+logger = logging.getLogger(__name__)
 
 # Pause between sends in a bulk retry (send_confirmations) — Resend's
 # default API rate limit is a couple of requests per second per team,
@@ -91,18 +94,20 @@ def send_and_record_confirmation(submission):
     submission — emailed + email_sent_at on success, email_send_failed on
     any error (a bad address/API error must never propagate: it would
     block a Save & Exit, or kill a bulk retry halfway). Caller checks the
-    bearer has an email first. Returns whether it sent."""
+    bearer has an email first. Returns None on success, else the error
+    message (e.g. Resend's reason) so staff-facing callers can show why."""
     try:
         send_submission_confirmation(submission)
-    except Exception:  # noqa: BLE001 — see docstring
+    except Exception as exc:  # noqa: BLE001 — see docstring
+        logger.exception('Confirmation email failed for submission %s', submission.pk)
         submission.email_send_failed = True
         submission.save(update_fields=['email_send_failed'])
-        return False
+        return str(exc) or type(exc).__name__
     submission.status = PassportSubmission.Status.EMAILED
     submission.email_sent_at = timezone.now()
     submission.email_send_failed = False
     submission.save(update_fields=['status', 'email_sent_at', 'email_send_failed'])
-    return True
+    return None
 
 
 def outstanding_confirmations():
@@ -121,19 +126,22 @@ def send_confirmations(submissions):
     """Staff retry path (admin action / retry_confirmation_emails command)
     — sends to each submission in turn, throttled to stay under Resend's
     rate limit. Skips any not yet locked (still mid-intake) or without an
-    email. Returns (sent, failed, skipped) counts."""
-    sent = failed = skipped = 0
+    email. Returns (sent, failures, skipped): failures is a list of
+    (submission, error message) pairs."""
+    sent = skipped = 0
+    failures = []
     for submission in submissions:
         if submission.locked_at is None or not submission.bearer.email:
             skipped += 1
             continue
-        if sent + failed and BULK_SEND_INTERVAL_SECONDS:
+        if sent + len(failures) and BULK_SEND_INTERVAL_SECONDS:
             time.sleep(BULK_SEND_INTERVAL_SECONDS)
-        if send_and_record_confirmation(submission):
+        error = send_and_record_confirmation(submission)
+        if error is None:
             sent += 1
         else:
-            failed += 1
-    return sent, failed, skipped
+            failures.append((submission, error))
+    return sent, failures, skipped
 
 
 def send_campaign(campaign_id):

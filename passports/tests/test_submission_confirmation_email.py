@@ -262,7 +262,9 @@ class TestRetry:
 
         monkeypatch.setattr('passports.emailing.resend_client.send_email', fake_send)
 
-        assert send_confirmations([good, bad, no_email]) == (1, 1, 1)
+        sent, failures, skipped = send_confirmations([good, bad, no_email])
+        assert (sent, skipped) == (1, 1)
+        assert failures == [(bad, 'Resend said no')]
 
         good.refresh_from_db()
         bad.refresh_from_db()
@@ -290,6 +292,24 @@ class TestRetry:
         submission.refresh_from_db()
         assert submission.status == PassportSubmission.Status.EMAILED
         assert submission.email_send_failed is False
+
+    def test_admin_action_shows_resend_reason_on_failure(self, client, django_user_model, season, venues, monkeypatch):
+        admin = django_user_model.objects.create_superuser(username='admin', email='a@example.com', password='x')
+        client.force_login(admin)
+        submission = _locked_submission(season, venues, intake_number=7, email_send_failed=True)
+
+        def boom(**kwargs):
+            raise RuntimeError('The example.com domain is not verified.')
+
+        monkeypatch.setattr('passports.emailing.resend_client.send_email', boom)
+
+        resp = client.post(
+            '/admin/passports/passportsubmission/',
+            data={'action': 'send_confirmation_emails', '_selected_action': [submission.pk]},
+            follow=True,
+        )
+
+        assert b'Intake #7 failed: The example.com domain is not verified.' in resp.content
 
     def test_admin_action_hidden_from_loggers(self, client, logger_user, season, venues):
         client.force_login(logger_user)

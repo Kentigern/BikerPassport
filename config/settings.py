@@ -206,7 +206,7 @@ EMAIL_PORT = int(os.environ.get('DJANGO_EMAIL_PORT', '587'))
 EMAIL_HOST_USER = os.environ.get('DJANGO_EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('DJANGO_EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = os.environ.get('DJANGO_EMAIL_USE_TLS', 'True') == 'True'
-DEFAULT_FROM_EMAIL = os.environ.get('DJANGO_DEFAULT_FROM_EMAIL', 'passports@makeyourmark.co.uk')
+DEFAULT_FROM_EMAIL = os.environ.get('DJANGO_DEFAULT_FROM_EMAIL', 'noreply@passports.makeyourmark.co.uk')
 
 # Resend (https://resend.com) — an HTTP-based provider, used directly via
 # its API rather than through EMAIL_BACKEND/SMTP above. First wired up for

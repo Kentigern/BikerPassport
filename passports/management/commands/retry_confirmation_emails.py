@@ -37,6 +37,8 @@ class Command(BaseCommand):
             )
             return
 
-        sent, failed, _ = send_confirmations(submissions.iterator())
-        style = self.style.WARNING if failed else self.style.SUCCESS
-        self.stdout.write(style(f"Sent {sent}, failed {failed}."))
+        sent, failures, _ = send_confirmations(submissions.iterator())
+        for submission, error in failures:
+            self.stdout.write(self.style.ERROR(f"Intake #{submission.intake_number} ({submission.season}) failed: {error}"))
+        style = self.style.WARNING if failures else self.style.SUCCESS
+        self.stdout.write(style(f"Sent {sent}, failed {len(failures)}."))
