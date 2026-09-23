@@ -1,9 +1,23 @@
 # CLAUDE.md — Bike + Brew Passport system
 
 Context for Claude Code sessions on this repo. Read with [SPEC.md](SPEC.md) (the
-full spec) and [README.md](README.md) (setup). Keep this file current when
-something here stops being true. **Never put secrets in this repo** (API keys,
-passwords, `.env` contents) — it is public on GitHub.
+full spec) and [README.md](README.md) (setup). **Never put secrets in this repo**
+(API keys, passwords, `.env` contents) — it is public on GitHub.
+
+## Keeping this file current
+
+Steve works on this repo from two PCs, each with its own Claude memory that does
+**not** sync — this file is the shared memory. So:
+
+- **Every push includes a CLAUDE.md update.** Before pushing, update "Current
+  status", the Day 1 list, "Waiting on Steve", "Parked" and "Gotchas" to match
+  what the commits being pushed change, and commit it with them. A project hook
+  (`.claude/hooks/claude_md_before_push.sh`, wired in `.claude/settings.json`)
+  refuses Claude's `git push` when CLAUDE.md isn't among the commits being
+  pushed; if it genuinely needs no change, append `# claude-md-reviewed` to the
+  push command. (The hook only sees pushes Claude runs, not VS Code's Sync button.)
+- Anything worth remembering across sessions goes **here**, not only in local memory.
+- At the start of a session, if the working tree is behind `origin/master`, suggest pulling first.
 
 ## What this is
 
@@ -68,6 +82,8 @@ Browser tests with pytest-playwright against `live_server`.
 
 Done and on Railway: ticket numbers, draw from issued numbers, email retry, notes
 alerts, public message page (off), yellow/black wheel, 10s Resend timeout.
+Repo is set up for two PCs (work + Steve's personal PC, both with Claude Code);
+`scripts/fix_claude_path.bat` fixes a Claude Code install that isn't on PATH.
 
 Day 1 MVP — remaining, in order (Day 1 may be brought forward at short notice):
 1. Bring Krystal staging up to date (`git pull`, `migrate`, `collectstatic`, restart app).
@@ -104,3 +120,5 @@ recording Resend bounces (needs a webhook).
 - SQLite "database is locked" under concurrent load is a local-only artefact (MySQL/Postgres are fine).
 - Resend free tier is ~100 emails/day — watch it when testing with real sends.
 - Intake numbers have gaps where test submissions were deleted; they're never reused.
+- `.sh` files must stay LF (`.gitattributes`) — bash on Windows fails on CRLF scripts; `.bat` files stay CRLF.
+- The push hook matches the text `git push` anywhere in a command, so an unrelated command mentioning it can be refused — use the `# claude-md-reviewed` comment.
