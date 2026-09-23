@@ -23,7 +23,7 @@ from .access import (
     is_submission_editable,
     mark_bearer_verified,
 )
-from .emailing import qualifying_bearers, send_campaign, send_submission_confirmation, snapshot_recipients
+from .emailing import qualifying_bearers, send_and_record_confirmation, send_campaign, snapshot_recipients
 from .forms import BearerForm
 from .models import (
     Bearer,
@@ -32,6 +32,7 @@ from .models import (
     EmailCampaignRecipient,
     PassportSubmission,
     RaffleExport,
+    RaffleTicket,
     RaffleWinner,
     Season,
     Venue,
@@ -179,13 +180,14 @@ def dashboard_view(request):
 @staff_member_required
 @require_POST
 def raffle_export_view(request):
-    """CSV raffle draw list — one row per *ticket*, not per bearer (a
-    bearer with 3 tickets gets 3 rows), shuffled, numbered. Mirrors the
-    legacy MARK_Entries.py tool's output shape, adapted to our actual
-    Bearer fields (a single mailing_address, not separate address lines).
+    """CSV raffle draw list — one row per issued ticket (RaffleTicket), in
+    ticket-number order, so each row's number is the same one its bearer
+    was sent in their confirmation email. Mirrors the legacy
+    MARK_Entries.py tool's output shape, adapted to our actual Bearer
+    fields (a single mailing_address, not separate address lines).
 
-    Real prizes are on the line, so this is POST-only (a plain GET link
-    would let anyone re-roll the shuffle just by refreshing/re-clicking)
+    Real prizes are on the line, so this is POST-only (it can issue any
+    still-missing ticket numbers first — see issue_missing_for_season)
     and every export is logged to RaffleExport — an immutable record of
     who generated it, when, and how many tickets it contained."""
     if not _is_site_admin(request.user):
@@ -197,62 +199,38 @@ def raffle_export_view(request):
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
 
     writer = csv.writer(response)
-    writer.writerow(['Entry ID', 'Name', 'Email', 'Phone', 'Mailing Address'])
+    writer.writerow(['Ticket Number', 'Name', 'Email', 'Phone', 'Mailing Address'])
 
     if season is not None:
-        submissions = (
-            PassportSubmission.objects.filter(season=season)
-            .select_related('bearer')
-            .annotate(stamp_total=Count('venues_stamped'))
-        )
-        entries = []
-        for submission in submissions:
-            tickets = min(submission.stamp_total // 10, PassportSubmission.MAX_RAFFLE_TICKETS)
-            entries.extend([submission.bearer] * tickets)
-        random.shuffle(entries)
-        for entry_id, bearer in enumerate(entries, start=1):
-            writer.writerow([entry_id, bearer.name, bearer.email, bearer.phone, bearer.mailing_address])
+        RaffleTicket.objects.issue_missing_for_season(season)
+        tickets = RaffleTicket.objects.filter(season=season).select_related('submission__bearer').order_by('number')
+        entry_count = 0
+        for ticket in tickets:
+            bearer = ticket.submission.bearer
+            writer.writerow([ticket.number, bearer.name, bearer.email, bearer.phone, bearer.mailing_address])
+            entry_count += 1
 
         RaffleExport.objects.create(
-            season=season, generated_by=request.user, entry_count=len(entries)
+            season=season, generated_by=request.user, entry_count=entry_count
         )
 
     return response
 
 
-def _generate_ticket_number(season):
-    """A 5-digit number (09999-99999) for this draw's slot-machine reveal —
-    generated fresh at draw time rather than pre-assigned to every ticket
-    up front, since nobody ever sees any ticket's number except the one
-    actually drawn. Retried on collision within the season purely for
-    tidy records (not fairness) — ~90,000 possible values makes exhausting
-    every retry effectively impossible."""
-    for _ in range(20):
-        candidate = f'{random.randint(9999, 99999):05d}'
-        if not RaffleWinner.objects.filter(season=season, ticket_number=candidate).exists():
-            return candidate
-    return candidate
-
-
 def _raffle_draw_pool(season):
-    """Bearers still eligible for the live draw this season — one entry per
-    bearer (not per ticket, unlike raffle_export_view's CSV), weighted by
-    their ticket count, excluding anyone RaffleWinner already recorded as
-    having won. Same annotate-based ticket count as raffle_export_view,
-    to avoid an N+1 of per-submission .raffle_tickets property calls."""
+    """Every issued ticket (RaffleTicket) still in the running this season
+    — i.e. whose bearer hasn't already won. Drawing uniformly over tickets
+    is what weights each bearer by their ticket count. Tops up any
+    submission still short of its earned tickets first, so one that was
+    saved but never Save & Exited isn't silently left out of the draw.
+    Returns (ticket_id, bearer_id) pairs — cheap enough for thousands."""
+    RaffleTicket.objects.issue_missing_for_season(season)
     already_won = RaffleWinner.objects.filter(season=season).values_list('bearer_id', flat=True)
-    submissions = (
-        PassportSubmission.objects.filter(season=season)
-        .exclude(bearer_id__in=already_won)
-        .select_related('bearer')
-        .annotate(stamp_total=Count('venues_stamped'))
+    return list(
+        RaffleTicket.objects.filter(season=season)
+        .exclude(submission__bearer_id__in=already_won)
+        .values_list('pk', 'submission__bearer_id')
     )
-    pool = []
-    for s in submissions:
-        tickets = min(s.stamp_total // 10, PassportSubmission.MAX_RAFFLE_TICKETS)
-        if tickets > 0:
-            pool.append((s.bearer, tickets))
-    return pool
 
 
 @staff_member_required
@@ -274,7 +252,7 @@ def raffle_draw_view(request):
     pool_count = 0
     winners = []
     if season is not None:
-        pool_count = len(_raffle_draw_pool(season))
+        pool_count = len({bearer_id for _, bearer_id in _raffle_draw_pool(season)})
         winners = RaffleWinner.objects.filter(season=season).select_related('bearer')
 
     return render(
@@ -287,11 +265,13 @@ def raffle_draw_view(request):
 @staff_member_required
 @require_POST
 def raffle_draw_spin_view(request):
-    """Picks the winner server-side (weighted-random over each still-
-    eligible bearer's ticket count) the instant this is called — the
-    browser only animates a spin that lands on whichever slice this
-    already chose, so the pick itself can't be influenced client-side.
-    JSON-403 on failure, matching this app's other fetch-driven endpoints
+    """Picks the winning ticket server-side (uniformly over every still-
+    eligible issued ticket) the instant this is called — the browser only
+    animates a spin that lands on whichever ticket this already chose, so
+    the pick itself can't be influenced client-side. The number revealed
+    is the drawn ticket's own issued number — the one its bearer was
+    emailed — so winners can be announced by number. JSON-403 on failure,
+    matching this app's other fetch-driven endpoints
     (bearer_search_view/bearer_save_view/submission_save_view) rather than
     the HTML PermissionDenied the full-page raffle views use."""
     if not _is_site_admin(request.user):
@@ -305,9 +285,12 @@ def raffle_draw_spin_view(request):
     if not pool:
         return JsonResponse({'ok': False, 'errors': {'pool': ['No eligible entrants left.']}}, status=400)
 
-    winner_bearer, winner_tickets = random.choices(pool, weights=[tickets for _, tickets in pool], k=1)[0]
+    ticket_id, _ = random.SystemRandom().choice(pool)
+    ticket = RaffleTicket.objects.select_related('submission__bearer').get(pk=ticket_id)
+    winner_bearer = ticket.submission.bearer
+    winner_tickets = RaffleTicket.objects.filter(submission_id=ticket.submission_id).count()
+    ticket_number = ticket.number
     prize = request.POST.get('prize', '').strip()
-    ticket_number = _generate_ticket_number(season)
 
     try:
         RaffleWinner.objects.create(
@@ -315,6 +298,7 @@ def raffle_draw_spin_view(request):
             bearer=winner_bearer,
             prize=prize,
             ticket_count=winner_tickets,
+            ticket=ticket,
             ticket_number=ticket_number,
             drawn_by=request.user,
         )
@@ -707,21 +691,22 @@ def submission_save_view(request):
     # (but not a Site Admin/superuser) is held to from now on. The
     # confirmation email (§5.3) fires exactly once, at this same moment,
     # for the same reason: re-exiting an already-locked submission is
-    # blocked above, so this branch only ever runs the first time.
-    if request.POST.get('exit') == 'true' and submission.locked_at is None:
+    # blocked above, so this branch only ever runs the first time. A failed
+    # send is recorded, not raised — staff retry it from the admin later.
+    just_locked = request.POST.get('exit') == 'true' and submission.locked_at is None
+    if just_locked:
         submission.locked_at = timezone.now()
         submission.save(update_fields=['locked_at'])
 
-        if submission.bearer.email:
-            try:
-                send_submission_confirmation(submission)
-            except Exception:  # noqa: BLE001 — a bad address/API error must not block the save
-                submission.email_send_failed = True
-                submission.save(update_fields=['email_send_failed'])
-            else:
-                submission.status = PassportSubmission.Status.EMAILED
-                submission.email_sent_at = timezone.now()
-                submission.save(update_fields=['status', 'email_sent_at'])
+    # Every locked submission gets its raffle ticket numbers, email or not
+    # — the draw works only from issued numbers. Also tops up after a Site
+    # Admin's later correction adds stamps (never removes any; see
+    # RaffleTicketManager.ensure_for_submission).
+    if submission.locked_at is not None:
+        RaffleTicket.objects.ensure_for_submission(submission)
+
+    if just_locked and submission.bearer.email:
+        send_and_record_confirmation(submission)
 
     return JsonResponse(
         {

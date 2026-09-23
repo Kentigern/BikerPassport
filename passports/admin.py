@@ -1,4 +1,4 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.shortcuts import redirect
 from simple_history.admin import SimpleHistoryAdmin
 
@@ -9,17 +9,24 @@ from .access import (
     is_submission_editable,
     mark_bearer_verified,
 )
+from .emailing import send_confirmations
 from .models import (
     Bearer,
     EmailCampaign,
     EmailCampaignRecipient,
     PassportSubmission,
     RaffleExport,
+    RaffleTicket,
     RaffleWinner,
     Season,
     Venue,
 )
 from .phone import normalize_uk_phone
+
+# Per-run cap for the "send confirmation email" admin action — at
+# emailing.BULK_SEND_INTERVAL_SECONDS apiece, ~30s of sending, well inside
+# a typical web request timeout.
+CONFIRMATION_RETRY_BATCH_LIMIT = 50
 
 admin.site.site_header = "MARK Passport Administration"
 admin.site.site_title = "MARK Passport Administration"
@@ -151,7 +158,9 @@ class PassportSubmissionAdmin(SimpleHistoryAdmin):
         'entered_by',
         'email_sent_at',
         'email_send_failed',
+        'issued_ticket_numbers',
     ]
+    actions = ['send_confirmation_emails']
     list_display = [
         'intake_number',
         'season',
@@ -177,6 +186,43 @@ class PassportSubmissionAdmin(SimpleHistoryAdmin):
             return True
         return is_submission_editable(request.user, obj)
 
+    def has_site_admin_permission(self, request):
+        return request.user.is_superuser or is_site_admin(request.user)
+
+    @admin.display(description='Raffle ticket numbers')
+    def issued_ticket_numbers(self, obj):
+        return ', '.join(obj.ticket_numbers.order_by('number').values_list('number', flat=True)) or '—'
+
+    def save_related(self, request, form, formsets, change):
+        # venues_stamped is saved here, not in save_model — so a Site Admin
+        # correcting a locked submission's stamps tops up its ticket numbers
+        # the same way a save through the intake form does.
+        super().save_related(request, form, formsets, change)
+        if form.instance.locked_at is not None:
+            RaffleTicket.objects.ensure_for_submission(form.instance)
+
+    @admin.action(description='Send / resend confirmation email', permissions=['site_admin'])
+    def send_confirmation_emails(self, request, queryset):
+        """Staff retry for §5.3 — one submission, or every failed one at
+        once (filter "Email send failed: Yes", then "Select all"). Also
+        resends a successfully emailed one on purpose, e.g. after
+        correcting the bearer's address. Capped per run so a big batch
+        can't outlast the web request's timeout — just run it again for
+        the rest (the retry_confirmation_emails command has no cap)."""
+        submissions = list(queryset.select_related('bearer')[:CONFIRMATION_RETRY_BATCH_LIMIT + 1])
+        remaining = len(submissions) > CONFIRMATION_RETRY_BATCH_LIMIT
+        sent, failed, skipped = send_confirmations(submissions[:CONFIRMATION_RETRY_BATCH_LIMIT])
+
+        self.message_user(request, f'Confirmation emails: {sent} sent, {failed} failed, {skipped} skipped (not yet Save & Exited, or no email on file).')
+        if failed:
+            self.message_user(request, f'{failed} still failed — check the bearer\'s email address, then try again.', messages.WARNING)
+        if remaining:
+            self.message_user(
+                request,
+                f'Only the first {CONFIRMATION_RETRY_BATCH_LIMIT} were processed this run — run the action again for the rest.',
+                messages.WARNING,
+            )
+
 
 @admin.register(RaffleExport)
 class RaffleExportAdmin(admin.ModelAdmin):
@@ -188,6 +234,26 @@ class RaffleExportAdmin(admin.ModelAdmin):
     list_display = ['season', 'generated_by', 'generated_at', 'entry_count']
     list_filter = ['season']
     search_fields = ['generated_by__username', 'season__name']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(RaffleTicket)
+class RaffleTicketAdmin(admin.ModelAdmin):
+    """Read-only, same rationale as RaffleExportAdmin — numbers are issued
+    only via RaffleTicketManager.ensure_for_submission (§5.3), and once
+    emailed to a bearer must stay exactly as issued."""
+
+    list_display = ['number', 'season', 'submission', 'created_at']
+    list_filter = ['season']
+    search_fields = ['number', 'submission__bearer__name']
 
     def has_add_permission(self, request):
         return False

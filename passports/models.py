@@ -1,7 +1,7 @@
 import uuid
 
 from django.conf import settings
-from django.db import models
+from django.db import models, transaction
 from simple_history.models import HistoricalRecords
 
 
@@ -252,6 +252,84 @@ class PassportSubmission(models.Model):
         return min(self.stamp_count // 10, self.MAX_RAFFLE_TICKETS)
 
 
+class RaffleTicketManager(models.Manager):
+    def ensure_for_submission(self, submission):
+        """Tops up this submission's issued ticket numbers to match its
+        current .raffle_tickets count — called whenever a locked submission
+        is saved (Save & Exit, or a later Site Admin correction), whether
+        or not the bearer has an email, and again right before the
+        confirmation email (§5.3) is rendered, so the numbers it lists
+        already exist. Never removes or renumbers a ticket already issued,
+        even if a later correction lowers the count: once a number's been
+        emailed to a bearer it has to stay theirs (and stays in the draw),
+        same rationale as RaffleExport/RaffleWinner's immutability. Numbers
+        are sequential per season, guarded the same way
+        PassportSubmission.intake_number is — a
+        SELECT ... FOR UPDATE on the season row — so concurrent saves
+        can't race to the same number."""
+        wanted = submission.raffle_tickets
+        with transaction.atomic():
+            season = Season.objects.select_for_update().get(pk=submission.season_id)
+            existing = list(self.filter(submission=submission).order_by('number'))
+            missing = wanted - len(existing)
+            if missing <= 0:
+                return existing
+
+            last_number = self.filter(season=season).aggregate(models.Max('number'))['number__max']
+            next_int = int(last_number) + 1 if last_number else 1
+            new_tickets = [
+                self.model(season=season, submission=submission, number=f'{next_int + i:06d}')
+                for i in range(missing)
+            ]
+            self.bulk_create(new_tickets)
+            existing.extend(new_tickets)
+        return existing
+
+    def issue_missing_for_season(self, season, *, locked_only=False):
+        """Runs ensure_for_submission for every submission this season
+        that's earned more tickets than it's been issued — so the raffle
+        export/draw (which work purely from issued numbers) can't miss a
+        submission that was saved but never Save & Exited. One query finds
+        the short ones; only those pay the per-submission cost."""
+        submissions = PassportSubmission.objects.filter(season=season)
+        if locked_only:
+            submissions = submissions.exclude(locked_at=None)
+        candidates = submissions.annotate(
+            stamp_total=models.Count('venues_stamped', distinct=True),
+            issued=models.Count('ticket_numbers', distinct=True),
+        ).filter(stamp_total__gte=10)
+        topped_up = 0
+        for submission in candidates:
+            earned = min(submission.stamp_total // 10, PassportSubmission.MAX_RAFFLE_TICKETS)
+            if submission.issued < earned:
+                self.ensure_for_submission(submission)
+                topped_up += 1
+        return topped_up
+
+
+class RaffleTicket(models.Model):
+    """One physical raffle-ticket number issued for a submission's earned
+    tickets (§5.3) — lets the confirmation email tell a bearer exactly
+    which numbers are theirs. Assigned via RaffleTicketManager.ensure_for_submission,
+    sequential per season, and never edited or deleted afterwards."""
+
+    objects = RaffleTicketManager()
+
+    season = models.ForeignKey(Season, on_delete=models.PROTECT, related_name='raffle_tickets')
+    submission = models.ForeignKey(PassportSubmission, on_delete=models.PROTECT, related_name='ticket_numbers')
+    number = models.CharField(max_length=6, help_text="Sequential per season, zero-padded, e.g. '000001'.")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['season', 'number']
+        constraints = [
+            models.UniqueConstraint(fields=['season', 'number'], name='unique_raffle_ticket_number_per_season'),
+        ]
+
+    def __str__(self):
+        return f"#{self.number} ({self.season}) — {self.submission.bearer}"
+
+
 class RaffleExport(models.Model):
     """Audit record of a raffle-ticket draw list export. Real prizes are on
     the line, so every export is logged here — who, when, how many tickets
@@ -292,15 +370,24 @@ class RaffleWinner(models.Model):
         help_text="Optional label the host can type in before drawing, e.g. 'Weekend for two'.",
     )
     ticket_count = models.PositiveIntegerField(
-        help_text="Bearer's raffle ticket count at the moment they were drawn — the odds they actually had."
+        help_text="Bearer's issued raffle ticket count at the moment they were drawn — the odds they actually had."
+    )
+    ticket = models.OneToOneField(
+        RaffleTicket,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='win',
+        help_text="The issued ticket actually drawn. Null only for winners drawn "
+        "before the draw switched to issued numbers.",
     )
     ticket_number = models.CharField(
-        max_length=5,
+        max_length=6,
         blank=True,
         default='',
-        help_text="Randomly assigned 5-digit number (09999–99999) revealed for "
-        "this draw's slot-machine animation — generated at draw time, not a "
-        "pre-printed physical ticket ID.",
+        help_text="The drawn ticket's number (a copy of ticket.number, so the "
+        "record reads on its own) — the same number the bearer was sent in "
+        "their confirmation email.",
     )
     drawn_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

@@ -101,7 +101,7 @@
     });
   }
 
-  // --- Slot machine — 5 reels, each cycling 0-9, revealing the winner's
+  // --- Slot machine — 6 reels (issued ticket numbers are 6 digits), each cycling 0-9, revealing the winner's
   // ticket number one digit at a time, left reel to right. -------------
   var DIGIT_CYCLES = 20; // repeated 0-9 sequences built into each reel strip
   var reelStrips = Array.prototype.slice.call(document.querySelectorAll('.reel-strip'));

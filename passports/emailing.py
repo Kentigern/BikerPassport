@@ -5,6 +5,8 @@ supports one) can call directly. See the plan's Context note: the
 *trigger* (currently threading.Thread in views.py) is expected to
 change; this module shouldn't need to."""
 
+import time
+
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
@@ -13,7 +15,12 @@ from django.utils import timezone
 from django.utils.html import strip_tags
 
 from . import resend_client
-from .models import Bearer, EmailCampaign, EmailCampaignRecipient
+from .models import Bearer, EmailCampaign, EmailCampaignRecipient, PassportSubmission, RaffleTicket
+
+# Pause between sends in a bulk retry (send_confirmations) — Resend's
+# default API rate limit is a couple of requests per second per team,
+# and 429s would just turn straight back into email_send_failed.
+BULK_SEND_INTERVAL_SECONDS = 0.6
 
 PURPOSE_CONSENT_FIELD = {
     EmailCampaign.Purpose.NEXT_SEASON: 'next_season_consent_status',
@@ -52,15 +59,15 @@ def build_unsubscribe_url(bearer, purpose):
 
 
 def send_submission_confirmation(submission):
-    """The confirmation email (§5.3) — sent once, via Resend, the first
-    time a submission is saved & exited (see submission_save_view). Just
-    the stamps/venues/tickets receipt — the data-retention consent request
-    §5.3 also describes is a separate, not-yet-built use case, deliberately
-    left out here. Callers are responsible for checking the bearer has an
-    email on file before calling this, and for recording success/failure on
-    the submission (status/email_sent_at/email_send_failed) — this function
-    only sends."""
+    """The confirmation email (§5.3) — sent via Resend the first time a
+    submission is saved & exited (see submission_save_view), and again on
+    a staff retry (send_confirmations). Just the stamps/venues/tickets
+    receipt — transactional, covering only data needed to run the raffle,
+    so no consent request: that goes out later as the first bulk email
+    (§5.3/§5.6). Only sends: use send_and_record_confirmation to also
+    record the outcome."""
     bearer = submission.bearer
+    tickets = RaffleTicket.objects.ensure_for_submission(submission)
     html_body = render_to_string(
         'passports/submission_confirmation_email.html',
         {
@@ -68,6 +75,7 @@ def send_submission_confirmation(submission):
             'venues': submission.venues_stamped.order_by('number'),
             'stamp_count': submission.stamp_count,
             'raffle_tickets': submission.raffle_tickets,
+            'ticket_numbers': [ticket.number for ticket in tickets],
         },
     )
     resend_client.send_email(
@@ -76,6 +84,56 @@ def send_submission_confirmation(submission):
         html_body=html_body,
         text_body=strip_tags(html_body),
     )
+
+
+def send_and_record_confirmation(submission):
+    """Sends the confirmation email and records the outcome on the
+    submission — emailed + email_sent_at on success, email_send_failed on
+    any error (a bad address/API error must never propagate: it would
+    block a Save & Exit, or kill a bulk retry halfway). Caller checks the
+    bearer has an email first. Returns whether it sent."""
+    try:
+        send_submission_confirmation(submission)
+    except Exception:  # noqa: BLE001 — see docstring
+        submission.email_send_failed = True
+        submission.save(update_fields=['email_send_failed'])
+        return False
+    submission.status = PassportSubmission.Status.EMAILED
+    submission.email_sent_at = timezone.now()
+    submission.email_send_failed = False
+    submission.save(update_fields=['status', 'email_sent_at', 'email_send_failed'])
+    return True
+
+
+def outstanding_confirmations():
+    """Submissions still owed a confirmation email: locked (so the email
+    would have fired), bearer has an email, but not successfully emailed —
+    covers both failed sends and an email address added after the fact."""
+    return (
+        PassportSubmission.objects.exclude(locked_at=None)
+        .exclude(bearer__email='')
+        .exclude(status=PassportSubmission.Status.EMAILED)
+        .select_related('bearer')
+    )
+
+
+def send_confirmations(submissions):
+    """Staff retry path (admin action / retry_confirmation_emails command)
+    — sends to each submission in turn, throttled to stay under Resend's
+    rate limit. Skips any not yet locked (still mid-intake) or without an
+    email. Returns (sent, failed, skipped) counts."""
+    sent = failed = skipped = 0
+    for submission in submissions:
+        if submission.locked_at is None or not submission.bearer.email:
+            skipped += 1
+            continue
+        if sent + failed and BULK_SEND_INTERVAL_SECONDS:
+            time.sleep(BULK_SEND_INTERVAL_SECONDS)
+        if send_and_record_confirmation(submission):
+            sent += 1
+        else:
+            failed += 1
+    return sent, failed, skipped
 
 
 def send_campaign(campaign_id):

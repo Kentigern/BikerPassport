@@ -44,6 +44,7 @@ This is an internal, staff-facing data-entry and reporting tool — not a public
 - **Bearer** — personal details captured off the passport: name, mailing address, phone, email (optional — bearers skew older and this charity doesn't reliably collect email). **Phone is mandatory and unique** (stored normalized, E.164 — see §5.2's access-control note) — it's the real identifying key, not name, since two different people can share a name. A bearer is a fresh record per submission unless staff explicitly match to an existing bearer — no assumption that identity is pre-registered. Also carries **consent/retention state**: consent status (`pending` / `granted` / `declined`), consent token (for the no-login email link), date requested, date responded, and a computed retention-expiry date for non-consenting bearers — see §5.6.
 - **Passport Submission** — linked to a Season and a Bearer: date received, which Cafes were stamped (a checklist against the 296), processing status (received / entered / emailed), staff member who entered it, timestamp, notes field for anomalies (e.g. ambiguous stamp, duplicate cafe stamps). **One per bearer per season** (DB-enforced), not one per physical hand-in — since a bearer's passport accumulates stamps over the season and can be processed more than once (see §1's three intake channels), a later save for the same bearer updates their existing submission rather than creating a second one.
 - **Derived per submission:** total stamp count, list of cafes visited, raffle tickets = `min(floor(stamp_count / 10), 28)` — **28 is a fixed cap**, confirmed by the charity, independent of how many of the 296 cafes exist in a given year.
+- **Raffle Ticket** — one row per raffle ticket actually issued to a bearer (not just the count above): a sequential-per-season number, assigned when a submission is Save & Exited — for every submission, whether or not the bearer has an email — so the confirmation email can tell the bearer their specific ticket number(s) (§5.3), and the raffle export/draw (§5.5, §5.9) work from those same numbers. Any submission still short of its numbers (e.g. saved but never exited) is topped up automatically before an export or draw. Immutable once issued, same rationale as the Raffle Export/Raffle Winner records below — if a submission is later corrected and its ticket count grows, new numbers top it up; a shrinking count never removes/renumbers ones already sent.
 
 ## 5. Core Workflows
 
@@ -70,17 +71,17 @@ At this volume (up to 5,000 passports, 30 volunteers, 6 weeks) two things become
 Sent to the bearer's email address on the submission. Contents:
 - Total stamps collected.
 - Full list of cafes visited (name + number).
-- Number of raffle tickets earned.
-- A request for consent to retain their personal details beyond this season, with a way to respond — see §5.6.
+- Number of raffle tickets earned, and each ticket's own number (see §4's Raffle Ticket record — assigned at Save & Exit, stable thereafter).
+- **No consent request.** This is a transactional receipt: the data it covers is required to run the raffle, so it needs no consent. Consent to use bearers' details for other purposes (§5.6) will be sought later, as the first bulk email (§5.10) — not in this email.
 
-Should be a plain, charity-branded template. Failures (bad address, bounce) must be visible to staff, not silent — a submission that failed to email should be flagged for follow-up, not lost.
+Sent via Resend from `passports@makeyourmark.co.uk` (domain verified in Resend; set by `DJANGO_DEFAULT_FROM_EMAIL`). Should be a plain, charity-branded template. Failures (bad address, bounce) must be visible to staff, not silent — a submission that failed to email should be flagged for follow-up, not lost. Site Admins retry from the admin's submission list ("Send / resend confirmation email" action — one submission, or every failed one via the "Email send failed" filter + select all), or all outstanding at once via the `retry_confirmation_emails` management command. Bounces reported by Resend after acceptance are not yet recorded (planned, low priority).
 
 ### 5.4 Lookup & correction
 Staff can search past submissions (by bearer name, email, or season) to fix data-entry mistakes and re-send the email if corrected.
 
 ### 5.5 Reporting
 - Season summary: total submissions, total stamps, total raffle tickets issued.
-- Full raffle ticket list/export (e.g. CSV) — one row per ticket, so it can feed an actual raffle draw.
+- Full raffle ticket list/export (CSV) — one row per issued ticket, by ticket number, so it can feed an actual raffle draw.
 - Cafe popularity (optional/nice-to-have): stamps per cafe, for thanking participating cafes.
 - Consent/retention report (see §5.6): counts of granted / declined / no-response, and which bearer records are due for purge.
 
@@ -115,8 +116,8 @@ A single, searchable, filterable timeline for Site Admins, merging what would ot
 
 Beyond the CSV ticket export (§5.5, still available and unchanged — a full ticket list for a manual/backup paper draw if wanted), the system can now run the raffle draw itself, live, on-screen, at the event:
 
-- A weighted-random pick happens **server-side** the instant a Site Admin clicks "Draw Next Winner" — over every bearer still eligible this season (i.e. not already drawn), weighted by their ticket count. The on-screen animation (a roulette-style wheel, or an alternative slot-machine view) is purely theatrical, landing on whatever the server already picked — the draw itself can't be influenced by anything happening in the browser.
-- Each winner drawn is recorded permanently (bearer, prize label if entered, ticket count and a display ticket number at the moment of drawing, who drew them, when) and is immediately excluded from all further draws this season — refreshing or reopening the page mid-ceremony is always safe and just resumes where the draw left off, since eligibility is recomputed fresh from the winners recorded so far rather than tracked client-side.
+- A weighted-random pick happens **server-side** the instant a Site Admin clicks "Draw Next Winner" — uniformly over every issued ticket (§4's Raffle Ticket) whose bearer is still eligible this season (i.e. not already drawn) — which weights each bearer by their ticket count. The number revealed is that ticket's own issued number, the same one its bearer was emailed. The on-screen animation (a roulette-style wheel, or an alternative slot-machine view) is purely theatrical, landing on whatever the server already picked — the draw itself can't be influenced by anything happening in the browser.
+- Each winner drawn is recorded permanently (bearer, prize label if entered, ticket count at the moment of drawing, and the issued ticket drawn, who drew them, when) and is immediately excluded from all further draws this season — refreshing or reopening the page mid-ceremony is always safe and just resumes where the draw left off, since eligibility is recomputed fresh from the winners recorded so far rather than tracked client-side.
 - This **narrows §8's original "automatic raffle drawing is out of scope"** — the draw now happens inside the system rather than assumed to happen outside it. What's still out of scope is anything about physically awarding/shipping prizes.
 
 ### 5.10 Bulk email to bearers

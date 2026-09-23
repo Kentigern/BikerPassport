@@ -32,6 +32,15 @@
                 <li>{{ venue.number }}. {{ venue.name }}</li>
               {% endfor %}
             </ul>
+
+            {% if ticket_numbers %}
+              <p>Your raffle ticket number{{ ticket_numbers|length|pluralize }}:</p>
+              <ul style="padding-left:1.2rem; margin:0 0 1rem;">
+                {% for number in ticket_numbers %}
+                  <li>{{ number }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
           </td>
         </tr>
         <tr>

@@ -65,7 +65,12 @@ def test_slot_machine_mode_reveals_matching_ticket_number(season, venues, staff_
     page.wait_for_selector("#reveal-overlay[style*='flex']", timeout=8000)
 
     winner = RaffleWinner.objects.get(season=season)
-    assert len(winner.ticket_number) == 5 and winner.ticket_number.isdigit()
+    # The revealed number is the winner's own issued ticket — the one their
+    # confirmation email listed — not a number made up at draw time.
+    assert winner.ticket is not None
+    assert winner.ticket_number == winner.ticket.number
+    assert winner.ticket.submission.bearer_id == winner.bearer_id
+    assert page.locator('.reel-window').count() == len(winner.ticket_number) == 6
     assert page.locator('#reveal-ticket-number').inner_text() == f'Ticket #{winner.ticket_number}'
 
 
