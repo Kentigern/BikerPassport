@@ -12,6 +12,14 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
+# The send runs inside the Save & Exit request, so a slow Resend call holds
+# a web worker (and, with few workers, every other volunteer) hostage. The
+# SDK's default of 30s also matches gunicorn's worker timeout, so a hung
+# call would get the whole worker killed. 10s is far above a normal send;
+# a timeout just becomes email_send_failed, which staff can retry.
+RESEND_TIMEOUT_SECONDS = 10
+resend.default_http_client = resend.RequestsClient(timeout=RESEND_TIMEOUT_SECONDS)
+
 
 def send_email(*, to, subject, html_body, text_body):
     """Sends one email via Resend. Raises on failure — callers are
