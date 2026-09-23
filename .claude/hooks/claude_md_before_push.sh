@@ -16,6 +16,17 @@ upstream=$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null) |
 if git diff --name-only "$upstream"..HEAD 2>/dev/null | grep -qx 'CLAUDE.md'; then
     exit 0
 fi
+# `git add CLAUDE.md && git commit ... && git push` in one command: the hook
+# runs before any of it, so accept a staged CLAUDE.md when this same command
+# commits (or adds it) before pushing.
+case "$input" in *"git commit"*|*"git add"*CLAUDE.md*)
+    if git diff --cached --name-only 2>/dev/null | grep -qx 'CLAUDE.md' ||
+       { case "$input" in *"git add"*CLAUDE.md*) true ;; *) false ;; esac &&
+         git status --porcelain -- CLAUDE.md 2>/dev/null | grep -q .; }; then
+        exit 0
+    fi
+    ;;
+esac
 
 printf '%s\n' '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"CLAUDE.md is not updated in the commits being pushed. Before pushing: update CLAUDE.md (Current status, Day 1 next steps, Waiting on Steve, Parked, Gotchas) to reflect what these commits change, commit it, then push again. If CLAUDE.md genuinely needs no change for these commits, re-run the push with the comment  # claude-md-reviewed  appended to the command."}}'
 exit 0

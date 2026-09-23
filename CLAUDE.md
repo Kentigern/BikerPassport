@@ -85,6 +85,13 @@ alerts, public message page (off), yellow/black wheel, 10s Resend timeout.
 Repo is set up for two PCs (work + Steve's personal PC, both with Claude Code);
 `scripts/fix_claude_path.bat` fixes a Claude Code install that isn't on PATH.
 
+Tested live on Railway: confirmation email end to end (Resend, verified sender),
+failed-send → admin resend, ticket backfill (106 tickets, contiguous). Tested only
+locally (automated + screenshots): no-email Save & Exit tickets, bulk retry, export,
+draw with issued numbers, notes alert, public message page, 10s timeout, data-transfer
+matching. Nothing tested on Krystal yet. In progress 2026-09-23: live Railway checks
+of no-email exit, notes alert, export and draw.
+
 Day 1 MVP — remaining, in order (Day 1 may be brought forward at short notice):
 1. Bring Krystal staging up to date (`git pull`, `migrate`, `collectstatic`, restart app).
 2. Copy users/groups/seasons/venues Railway → Krystal: `scripts/transfer_reference_data.txt`.
@@ -95,7 +102,10 @@ Day 1 MVP — remaining, in order (Day 1 may be brought forward at short notice)
 Fallback if Day 1 comes first: run intake on Railway (clear test data, 3–4 gunicorn
 workers, bulk-create Logger accounts), move data to Krystal later.
 
-Waiting on Steve: recipient lists for `DJANGO_NOTES_ALERT_EMAILS` / `DJANGO_PUBLIC_MESSAGE_ALERT_EMAILS`.
+Waiting on Steve: recipient lists for `DJANGO_NOTES_ALERT_EMAILS` / `DJANGO_PUBLIC_MESSAGE_ALERT_EMAILS`;
+the boss's wishes for the confirmation email design (it's a hand-coded HTML template —
+logo, wording, conditional messages, an existing MARK/Mailchimp design are all possible;
+admin-editable wording deferred until after Day 1).
 
 **Parked** (don't pursue unless asked): bulk email campaigns (when resumed, the first
 campaign is the data-use consent request — needs an audience rule for *not yet
