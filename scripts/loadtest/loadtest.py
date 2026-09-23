@@ -10,10 +10,11 @@ Every request is timed; a summary per step is printed at the end.
 Run against STAGING only — it creates real rows. Set up and tear down with:
 
     python manage.py loadtest_fixtures --create 40 --password <pw> --yes
-    python scripts/loadtest.py https://staging.bikeandbrew.org --users 40 --password <pw>
+    python scripts/loadtest/loadtest.py https://staging.bikeandbrew.org --users 40 --password <pw>
     python manage.py loadtest_fixtures --cleanup --yes
 
 Needs only `requests` (already installed as a dependency of `resend`).
+See README.txt alongside for the full procedure; run_loadtest.bat wraps it.
 """
 
 import argparse

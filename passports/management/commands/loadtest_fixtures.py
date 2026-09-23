@@ -5,7 +5,7 @@ from django.db import connection, transaction
 
 from passports.models import Bearer, PassportSubmission, RaffleTicket
 
-# Everything scripts/loadtest.py creates is identifiable by these, so
+# Everything scripts/loadtest/loadtest.py creates is identifiable by these, so
 # --cleanup can remove exactly that and nothing else. The phone block is
 # 07700 7xxxxx: valid to libphonenumber (so it survives BearerForm's
 # validation, unlike Ofcom's 07700 900xxx fiction range — see
@@ -17,7 +17,7 @@ NAME_PREFIX = 'LOADTEST '
 
 class Command(BaseCommand):
     help = (
-        "Sets up / tears down data for scripts/loadtest.py. --create N makes N "
+        "Sets up / tears down data for scripts/loadtest/loadtest.py. --create N makes N "
         "Passport Logger accounts (loadtest01..N) with the given password; "
         "--cleanup deletes those accounts plus every bearer, submission and "
         "raffle ticket the load test created (identified by the LOADTEST name "

@@ -6,3 +6,4 @@ db.sqlite3
 staticfiles/
 legacy/
 .pytest_cache/
+scripts/loadtest/results_*.txt
