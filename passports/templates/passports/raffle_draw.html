@@ -65,26 +65,7 @@
       overflow-y: auto;
     }
 
-    .view-toggle {
-      display: flex;
-      gap: .5rem;
-    }
-    .view-toggle-btn {
-      padding: .5rem 1.1rem;
-      font-size: .9rem;
-      font-weight: bold;
-      background: #3a3535;
-      color: #c9b998;
-      border: 1px solid #665f5f;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    .view-toggle-btn.active {
-      background: #efdaa4;
-      color: #2B2727;
-      border-color: #efdaa4;
-    }
-
+    :root { --wheel-yellow: #FFD100; }
     #wheel-wrap {
       position: relative;
       width: min(70vmin, 640px);
@@ -99,7 +80,7 @@
       height: 0;
       border-left: 1.4rem solid transparent;
       border-right: 1.4rem solid transparent;
-      border-top: 2.2rem solid #efdaa4;
+      border-top: 2.2rem solid var(--wheel-yellow);
       z-index: 3;
       filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .5));
     }
@@ -107,7 +88,7 @@
       width: 100%;
       height: 100%;
       border-radius: 50%;
-      box-shadow: 0 0 0 .5rem #efdaa4, 0 0 40px rgba(0, 0, 0, .5);
+      box-shadow: 0 0 0 .5rem var(--wheel-yellow), 0 0 40px rgba(0, 0, 0, .5);
       transition: transform 5s cubic-bezier(.15, .85, .35, 1);
     }
     #remaining-label {
@@ -118,49 +99,6 @@
       font-weight: bold;
       font-size: 1rem;
       white-space: nowrap;
-    }
-
-    #slot-wrap {
-      display: none;
-      gap: .6rem;
-      padding: 1.5rem 2rem;
-      background: #1a1717;
-      border: .4rem solid #efdaa4;
-      border-radius: 16px;
-      box-shadow: 0 0 40px rgba(0, 0, 0, .5);
-    }
-    .reel-window {
-      position: relative;
-      width: min(11vmin, 90px);
-      height: min(15vmin, 120px);
-      overflow: hidden;
-      background: #3a3535;
-      border-radius: 8px;
-    }
-    .reel-window::before, .reel-window::after {
-      content: '';
-      position: absolute;
-      left: 0;
-      right: 0;
-      height: 35%;
-      z-index: 1;
-      pointer-events: none;
-    }
-    .reel-window::before { top: 0; background: linear-gradient(rgba(0, 0, 0, .6), transparent); }
-    .reel-window::after { bottom: 0; background: linear-gradient(transparent, rgba(0, 0, 0, .6)); }
-    .reel-strip {
-      display: flex;
-      flex-direction: column;
-    }
-    .reel-strip .digit {
-      height: min(15vmin, 120px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: clamp(2rem, 7vmin, 4rem);
-      font-weight: bold;
-      color: #efdaa4;
-      flex-shrink: 0;
     }
 
     #controls {
@@ -299,25 +237,11 @@
 <div id="season-label">{% if season %}Season: {{ season }}{% else %}No active season{% endif %}</div>
 
 <div id="stage">
-  <div class="view-toggle">
-    <button type="button" id="view-wheel-btn" class="view-toggle-btn active">Wheel</button>
-    <button type="button" id="view-slot-btn" class="view-toggle-btn">Slot Machine</button>
-  </div>
-
   <div id="wheel-wrap">
     <div id="pointer"></div>
     <svg id="wheel" viewBox="0 0 400 400">
       <g id="wheel-g"></g>
     </svg>
-  </div>
-
-  <div id="slot-wrap">
-    <div class="reel-window"><div class="reel-strip"></div></div>
-    <div class="reel-window"><div class="reel-strip"></div></div>
-    <div class="reel-window"><div class="reel-strip"></div></div>
-    <div class="reel-window"><div class="reel-strip"></div></div>
-    <div class="reel-window"><div class="reel-strip"></div></div>
-    <div class="reel-window"><div class="reel-strip"></div></div>
   </div>
 
   <div id="remaining-label"></div>

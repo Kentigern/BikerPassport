@@ -56,11 +56,16 @@ def test_draw_records_winner_and_excludes_them_from_future_draws(season, venues,
     assert page.locator('#remaining-label').inner_text() == '2 entrants'
 
 
-def test_slot_machine_mode_reveals_matching_ticket_number(season, venues, staff_user, page, live_server):
+def test_wheel_reveals_matching_ticket_number(season, venues, staff_user, page, live_server):
     _bearer_with_submission(season, venues, 0)
     _login_to_draw_page(page, live_server, staff_user)
 
-    page.click('#view-slot-btn')
+    # The slot-machine view was removed at the charity's request — the
+    # yellow/black wheel is the only draw view.
+    assert page.locator('#view-slot-btn, #slot-wrap').count() == 0
+    fills = page.locator('#wheel-g path').evaluate_all("els => [...new Set(els.map(e => e.getAttribute('fill')))]")
+    assert sorted(fills) == ['#111111', '#FFD100']
+
     page.click('#spin-btn')
     page.wait_for_selector("#reveal-overlay[style*='flex']", timeout=8000)
 
@@ -70,7 +75,6 @@ def test_slot_machine_mode_reveals_matching_ticket_number(season, venues, staff_
     assert winner.ticket is not None
     assert winner.ticket_number == winner.ticket.number
     assert winner.ticket.submission.bearer_id == winner.bearer_id
-    assert page.locator('.reel-window').count() == len(winner.ticket_number) == 6
     assert page.locator('#reveal-ticket-number').inner_text() == f'Ticket #{winner.ticket_number}'
 
 
