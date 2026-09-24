@@ -10,6 +10,18 @@ staging.bikeandbrew.org). Phase 2 next, narrowed to reference data only — see
 [scripts/transfer_reference_data.txt](../scripts/transfer_reference_data.txt).
 Phases 3–4 not started.
 
+**Finding (2026-09-24) — read before Phase 3:** `bikeandbrew.org` is a **parked domain
+(alias)** of the account's main domain, *not* the primary domain as noted on
+2026-09-20. An alias always serves the main domain's `public_html` and cPanel offers
+no document-root setting for it — that's why "repoint the document root" (Phase 0
+item 1, Phase 3 step 6) can't be done as written. Revised approach, all doable in
+cPanel without Krystal support: record its DNS zone, remove the alias, re-add
+`bikeandbrew.org` as a normal domain with "Share document root" unticked and folder
+`bikerpassport` (the folder staging already serves, which holds the Passenger
+`.htaccess`). Phase 3 below is updated accordingly. Also: Day 1 intake may run on
+staging.bikeandbrew.org first — its database *is* the production database, so the
+domain switch later needs no data migration (Phase 3 step 7 no longer applies).
+
 
 Detailed runbook, agreed with the user on 2026-09-20, for the three-part migration: deploy Django to Krystal, give Django the bikeandbrew.org domain, and give WordPress steve-newman.com as a temporary replacement domain. 
 
@@ -18,7 +30,7 @@ Detailed runbook, agreed with the user on 2026-09-20, for the three-part migrati
 **Hard constraint on WordPress:** the user explicitly does not want WordPress's files moved/relocated, ever. The resolved approach is a config-only split: Django gets a brand-new folder; bikeandbrew.org's *document-root mapping* is repointed to that new folder (cPanel lets you edit which folder a domain — including the Primary Domain — points to, independent of what's already there); steve-newman.com is added as a second Addon Domain whose document root is set to WordPress's *existing, untouched* `public_html`. Multiple domains sharing one document root is a standard cPanel pattern (classic "Parked Domain" behavior). WordPress's own canonical URL (Settings > General / wp_options) still needs updating to steve-newman.com — a settings edit, not a file move — and again later to makeyourmark.co.uk when that's ready, with no further file moves either time.
 
 ### Phase 0 — Discovery (no live impact)
-1. Confirm cPanel > Domains lets you edit the Primary Domain's document root independently (this is the crux of the whole no-move approach).
+1. ~~Confirm cPanel > Domains lets you edit the Primary Domain's document root~~ — **checked 2026-09-24:** bikeandbrew.org is a parked domain (alias), which has no document-root setting; see the finding at the top and the revised Phase 3.
 2. Confirm Python version options in Setup Python App include 3.10+ (app runs 3.11 locally, needs Django 5.2).
 3. Confirm shell/SSH access works (resolved: Krystal support enables SSH on request) or find the GUI pip-install/execute-script alternative if Krystal's build has one.
 4. Confirm cPanel > Git Version Control is available for deploying from `Kentigern/BikerPassport` on GitHub.
@@ -46,11 +58,16 @@ This is a rehearsal now; repeat with a fresh dump right before the real cutover 
 ### Phase 3 — The coordinated cutover
 1. A day ahead: lower DNS TTLs for steve-newman.com/www at GoDaddy.
 2. In cPanel, create Django's new app folder (WordPress's `public_html` untouched).
-3. Add steve-newman.com as an Addon Domain, document root = existing `public_html`.
+3. Add steve-newman.com as an **alias (parked domain) of the main domain**, so it serves the existing `public_html` (WordPress) untouched.
 4. Update WordPress's Site Address/Home URL to steve-newman.com (wp-admin > Settings > General, or WP-CLI `search-replace` for hardcoded links).
 5. At GoDaddy, repoint `www.steve-newman.com`/apex forwarding from Railway to Krystal's addon-domain target; wait for propagation; confirm WordPress loads at steve-newman.com.
-6. Repoint bikeandbrew.org's document root from `public_html` to Django's new folder.
-7. Re-run the data migration (fresh dump) right before step 6.
+6. Move bikeandbrew.org to Django (it's currently an alias, so it has no document-root setting of its own):
+   a. cPanel → Zone Editor → bikeandbrew.org → record/export **every** DNS record (MX/email especially) — removing an alias can drop its zone.
+   b. cPanel → Domains: remove the `bikeandbrew.org` alias.
+   c. Create a New Domain `bikeandbrew.org`, **untick "Share document root"**, folder `bikerpassport`.
+   d. Re-add any DNS records lost in (b); add `bikeandbrew.org` to `DJANGO_ALLOWED_HOSTS` / `DJANGO_CSRF_TRUSTED_ORIGINS`, set `DJANGO_PUBLIC_BASE_URL=https://bikeandbrew.org` in `.env`; restart the app.
+   e. Optionally redirect staging.bikeandbrew.org → bikeandbrew.org so volunteers' bookmarks keep working.
+7. ~~Re-run the data migration~~ — not needed if intake has been running on Krystal staging (same app, same database).
 8. cPanel SSL/TLS Status > Run AutoSSL for both domains.
 9. Smoke test both live domains fully.
 

@@ -78,9 +78,22 @@ Browser tests with pytest-playwright against `live_server`.
   so the sender must be `…@passports.makeyourmark.co.uk` (default
   `noreply@passports.makeyourmark.co.uk`). The bare `makeyourmark.co.uk` is NOT verified.
 
-## Current status (end of 2026-09-23)
+## Current status (24 Sep 2026, mid-session — switching PCs)
 
-**Next session starts with** [docs/plan_2026-09-24_krystal.md](docs/plan_2026-09-24_krystal.md) (Krystal deploy, config data, email, smoke test).
+**Resume** [docs/plan_2026-09-24_krystal.md](docs/plan_2026-09-24_krystal.md) at **Step 1**
+(not started yet). Prep done so far: Steve has cPanel **Terminal** access. Still to have
+ready: the virtualenv `source …` command (cPanel → Setup Python App → edit the app),
+a Resend API key named `krystal` (Sending access, domain passports.makeyourmark.co.uk —
+never paste it into chat), and the alert email address(es).
+
+**Found today:** `bikeandbrew.org` is a **parked domain (alias)** of the account's main
+domain — not the primary domain as earlier notes said. Aliases have no document-root
+setting (that's why cPanel showed no options), so it can't simply be "repointed". The
+fix needs no Krystal ticket: on cutover day remove the alias and re-add it as a normal
+domain with its own folder `bikerpassport` (full steps in
+[docs/krystal_migration.md](docs/krystal_migration.md) Phase 3, step 6).
+**Decision:** do both — run Day 1 intake on **staging.bikeandbrew.org** if needed (its
+database is the production database), and switch the domain whenever convenient.
 
 Done and on Railway: ticket numbers, draw from issued numbers, email retry, notes
 alerts, public message page (off), yellow/black wheel, 10s Resend timeout.
@@ -103,7 +116,7 @@ Steps 1–4 + smoke test are planned in detail for 24 Sep: [docs/plan_2026-09-24
 2. Copy users/groups/seasons/venues Railway → Krystal: `scripts/transfer_reference_data.txt`.
 3. Krystal `.env`: `RESEND_API_KEY`, `DJANGO_DEFAULT_FROM_EMAIL`, alert email lists; send a test.
 4. Test HTTPS logins/forms on Krystal (`SECURE_PROXY_SSL_HEADER` assumes a proxy; Apache may differ).
-5. Cutover bikeandbrew.org (runbook Phase 3). Railway stays as fallback until done.
+5. Cutover bikeandbrew.org (runbook Phase 3 — revised for the parked-domain finding). Optional for Day 1: intake can run on staging.bikeandbrew.org. Railway stays as fallback until done.
 6. Real-passport smoke test.
 Fallback if Day 1 comes first: run intake on Railway (clear test data, 3–4 gunicorn
 workers, bulk-create Logger accounts), move data to Krystal later.
@@ -130,6 +143,7 @@ recording Resend bounces (needs a webhook).
 ## Gotchas learned the hard way
 
 - Windows **PowerShell `>` writes UTF-16** — use cmd or Git Bash for `dumpdata > file`.
+- `bikeandbrew.org` is a cPanel **alias (parked domain)**: no document-root setting; check domain types with `uapi DomainInfo list_domains` in cPanel Terminal. Removing an alias can drop its DNS zone — export records first.
 - Krystal MySQL needs `?ssl_disabled=true` on `DATABASE_URL` (PyMySQL SSL handshake fails otherwise).
 - WhiteNoise manifest storage: a missing `collectstatic` makes every page 500.
 - `dumpdata` returns nothing inside the pytest harness — tests serialize directly instead.
