@@ -27,7 +27,10 @@ SECRET_KEY = os.environ.get(
 )
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
+# Off unless explicitly turned on, so a server whose .env forgets the line is
+# safe (Krystal staging once ran in debug mode that way). Local dev sets
+# DJANGO_DEBUG=True in .env (see .env.example).
+DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = [
     h.strip() for h in os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',') if h.strip()

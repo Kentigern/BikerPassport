@@ -22,6 +22,21 @@ def _allow_test_hosts(settings):
     settings.ALLOWED_HOSTS = ['*']
 
 
+@pytest.fixture(scope='session', autouse=True)
+def _plain_http_test_servers():
+    # The test client and live_server speak plain HTTP. With DEBUG off (the
+    # default, or a .env copied from a live site) the HTTPS redirect, HSTS and
+    # secure-only cookies would break every request and login. Session-scoped
+    # so it lands before live_server (also session-scoped) builds its
+    # middleware, which reads these once at startup.
+    from django.conf import settings
+
+    settings.SECURE_SSL_REDIRECT = False
+    settings.SECURE_HSTS_SECONDS = 0
+    settings.SESSION_COOKIE_SECURE = False
+    settings.CSRF_COOKIE_SECURE = False
+
+
 @pytest.fixture(autouse=True)
 def _never_send_real_email(settings):
     # A developer's .env may hold the live Resend key and real staff
