@@ -115,7 +115,9 @@ Steps 1–4 + smoke test are planned in detail for 24 Sep: [docs/plan_2026-09-24
 2. Copy users/groups/seasons/venues Railway → Krystal: `scripts/transfer_reference_data.txt`.
 3. Krystal `.env`: `RESEND_API_KEY`, `DJANGO_DEFAULT_FROM_EMAIL`, alert email lists; send a test.
 4. Test HTTPS logins/forms on Krystal (`SECURE_PROXY_SSL_HEADER` assumes a proxy; Apache may differ).
-5. Cutover bikeandbrew.org (runbook Phase 3 — revised for the parked-domain finding). Optional for Day 1: intake can run on staging.bikeandbrew.org.
+5. Cutover bikeandbrew.org (runbook Phase 3, revised for the parked-domain finding) — **on hold**:
+   it takes bikeandbrew.org off WordPress, whose handover to Steve is paused. Ignore
+   WordPress until he says otherwise. Day 1 intake runs on staging.bikeandbrew.org.
 6. Real-passport smoke test.
 Day 1 intake runs on Krystal (staging.bikeandbrew.org if the cutover isn't done yet).
 
