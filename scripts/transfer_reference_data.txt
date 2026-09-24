@@ -28,6 +28,11 @@ file: don't email it, and delete it from both machines when done.
 
   then Restart the app in cPanel "Setup Python App".
 
+- Groups travel WITH their permissions, as Railway has them at export
+  time. Permission-granting migrations (e.g. 0022, Site Admin can see
+  Public messages) do nothing on a site with no groups yet, so make sure
+  Railway's latest deploy has finished before exporting.
+
 - On your PC: the Railway CLI, logged in and linked to the "Make Your Mark"
   project (railway status shows it), run from the repo folder.
 
