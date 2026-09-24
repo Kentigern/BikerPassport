@@ -38,7 +38,7 @@ In the SSH session:
 
 ```
 cd ~/bikerpassport
-source <virtualenv activate command>
+source /home/cfdfcfde/virtualenv/bikerpassport/3.12/bin/activate && cd /home/cfdfcfde/bikerpassport
 git status                  # should be clean (.env is ignored, not shown)
 git pull
 pip install -r requirements.txt
@@ -180,7 +180,7 @@ working, smoke test passed) and commit and push.
 
 ---
 
-## Step 7 — Prep tomorrow's cutover (5 min)
+## Step 7 — Prep tomorrow's cutover (5 min) — ON HOLD (WordPress handover paused; skip)
 
 At GoDaddy, **lower the TTL** on the `steve-newman.com` / `www` DNS records to the minimum
 (runbook Phase 3, step 1). It takes up to a day to take effect, which is why it's done
@@ -191,5 +191,5 @@ now. It changes nothing visible.
 ## If Day 1 is suddenly brought forward
 
 If today goes well, run intake on Krystal at staging.bikeandbrew.org straight away. The
-domain name is cosmetic, and the cutover can follow. If Krystal isn't ready, use the
-Railway fallback in CLAUDE.md.
+domain name is cosmetic, and the cutover can follow. If Krystal isn't ready, see
+[railway_fallback.md](railway_fallback.md).

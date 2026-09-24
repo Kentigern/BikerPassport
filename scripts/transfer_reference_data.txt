@@ -21,7 +21,7 @@ file: don't email it, and delete it from both machines when done.
   later). Railway deploys from master automatically. On Krystal (SSH):
 
       cd ~/bikerpassport
-      source <virtualenv activate path from cPanel "Setup Python App">
+      source /home/cfdfcfde/virtualenv/bikerpassport/3.12/bin/activate && cd /home/cfdfcfde/bikerpassport
       git pull
       python manage.py migrate
       python manage.py collectstatic --noinput

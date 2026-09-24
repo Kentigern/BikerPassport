@@ -65,12 +65,17 @@ Browser tests with pytest-playwright against `live_server`.
 
 ## Hosting
 
-- **Railway** — test site only, permanently (Steve's decision: never real data or
-  intake). Project "Make Your Mark", service "BikerPassport", deploys automatically from `master`; served at www.steve-newman.com. Test data only.
+- **Railway** — the test site, and the planned **fallback** for real intake if Krystal
+  can't be used: [docs/railway_fallback.md](docs/railway_fallback.md) (plan only, deliberately
+  not pre-built; recovery takes ~half a day, starting with building `reset_intake_data`). Only one site may take intake at a time.
+  Project "Make Your Mark", service "BikerPassport", deploys automatically from `master`;
+  served at www.steve-newman.com. Test data only.
   Start command runs `migrate` + `collectstatic`. Single gunicorn worker.
   **Variable changes need a Deploy/Redeploy** before the app sees them.
 - **Krystal (production)** — shared cPanel hosting, Passenger + MySQL, same account as
-  MARK's WordPress site. Staging app at **staging.bikeandbrew.org** (folder `~/bikerpassport`,
+  MARK's WordPress site; Python 3.12 there. SSH/cPanel Terminal venv:
+  `source /home/cfdfcfde/virtualenv/bikerpassport/3.12/bin/activate && cd /home/cfdfcfde/bikerpassport`.
+  Staging app at **staging.bikeandbrew.org** (folder `~/bikerpassport`,
   `.env` in the app folder). Production will be **bikeandbrew.org** after the cutover in
   [docs/krystal_migration.md](docs/krystal_migration.md). Krystal requires the footer
   credit "Hosting kindly provided by Krystal" (linked) — contractual, don't remove it.
@@ -78,18 +83,32 @@ Browser tests with pytest-playwright against `live_server`.
   so the sender must be `…@passports.makeyourmark.co.uk` (default
   `noreply@passports.makeyourmark.co.uk`). The bare `makeyourmark.co.uk` is NOT verified.
 
-## Current status (24 Sep 2026, evening — on Steve's personal PC)
+## Current status (24 Sep 2026, late evening — on Steve's personal PC)
 
-Progress on [docs/plan_2026-09-24_krystal.md](docs/plan_2026-09-24_krystal.md):
-- **Step 1 done** — Krystal staging pulled, migrated, collectstatic, restarted; new code live.
-- **`.env` on Krystal updated** (Steve edits it with WinSCP; show hidden files) — Resend key
-  and alert vars set. Public message page is **on** there; a test message was stored.
-- **Fix pushed:** migration `0022` lets Site Admin see Public messages (was superuser-only).
-  Krystal needs `git pull` + `migrate` + restart for it.
-- **Next: Step 2** (copy users/groups/seasons/venues) tonight — Krystal has **no groups yet**,
-  and groups travel with Railway's permissions, so export only after Railway's deploy of
-  `0022` finishes. Then the confirmation-email test and the real-passport smoke test.
-- Personal PC now has a dev setup: Python 3.11 `.venv`, `pip install -r requirements-dev.txt`,
+**Krystal is ready for real intake at staging.bikeandbrew.org.** Steps 1–6 of
+[docs/plan_2026-09-24_krystal.md](docs/plan_2026-09-24_krystal.md) done; step 7 (DNS prep for
+the cutover) on hold with the WordPress work. Intake will start at #1 / ticket 000001.
+- Code current (incl. migration `0022`: Site Admin sees Public messages).
+- `.env` on Krystal (Steve edits it with WinSCP): Resend key, sender, alert lists set;
+  **`DJANGO_DEBUG=False`** (it was True until tonight — see Gotchas). Public message page
+  is **on** there — decide with MARK whether it stays on.
+- Reference data copied Railway → Krystal: 70 users, 3 groups, season 2026, 296 venues.
+  Staff log in with their Railway passwords. (`railway ssh` needs Steve's
+  passphrase-protected key, so he runs those commands himself.)
+- HTTPS verified: http→https 301, HSTS (1 h), secure cookies, CSRF OK, plain 404s.
+- Smoke test passed (confirmation + resend emails, notes alert, locking, CSV export, draw
+  page, audit log, Krystal footer); test data then removed (`loadtest_fixtures --cleanup`,
+  test raffle export and public message deleted).
+- `DJANGO_DEBUG` now **defaults to False** (released 25 Sep); tests no longer depend on `.env`'s
+  DEBUG (conftest forces plain-HTTP test servers). 58 pass with DEBUG on, off or unset.
+- Load test on Krystal (24 Sep, 23:48): 40 volunteers × 10 min, 775 passports, p95 < 0.42 s,
+  0 app errors (24 tool-caused duplicate-phone 400s). Report: Claude Docs "Bike + Brew Krystal
+  Test Report". cPanel Resource Usage: 0 faults on every limit (CPU est. ~70% of one core during the test,
+  memory 117 MB of 1 GB). Load-test data cleaned up 25 Sep — Krystal back to 0 submissions.
+- **Railway fixed (25 Sep, 00:18 redeploy):** `DJANGO_DEBUG` was explicitly True — now False
+  (verified: http→https 301, HSTS, secure cookies, plain 404, CSRF OK). Misnamed
+  `DJANGO_PUBLIC_MESSAGES_ALERT_EMAILS` renamed to `DJANGO_PUBLIC_MESSAGE_ALERT_EMAILS` (same value).
+- Personal PC has a dev setup: Python 3.11 `.venv`, `pip install -r requirements-dev.txt`,
   `playwright install chromium`; 58 tests pass.
 
 **Found today:** `bikeandbrew.org` is a **parked domain (alias)** of the account's main
@@ -113,19 +132,14 @@ with no email (tickets issued, no email); notes alert to staff; raffle CSV expor
 addresses broke it in spreadsheets); live draw revealing the winner's own issued
 ticket. Tested only locally: bulk retry, public message page (off on Railway), 10s
 timeout, data-transfer matching. Nothing tested on Krystal yet. Railway holds one test
-RaffleWinner (harmless: Railway is test-only).
+RaffleWinner (removed by `reset_intake_data` if Railway becomes the fallback).
 
-Day 1 MVP — remaining, in order (Day 1 may be brought forward at short notice).
-Steps 1–4 + smoke test are planned in detail for 24 Sep: [docs/plan_2026-09-24_krystal.md](docs/plan_2026-09-24_krystal.md).
-1. Bring Krystal staging up to date (`git pull`, `migrate`, `collectstatic`, restart app).
-2. Copy users/groups/seasons/venues Railway → Krystal: `scripts/transfer_reference_data.txt`.
-3. Krystal `.env`: `RESEND_API_KEY`, `DJANGO_DEFAULT_FROM_EMAIL`, alert email lists; send a test.
-4. Test HTTPS logins/forms on Krystal (`SECURE_PROXY_SSL_HEADER` assumes a proxy; Apache may differ).
-5. Cutover bikeandbrew.org (runbook Phase 3, revised for the parked-domain finding) — **on hold**:
+Day 1 MVP — remaining (Day 1 may be brought forward at short notice):
+1. Real-passport smoke test on Krystal (then decide whether to keep or clean it up).
+2. Later, raise HSTS (`DJANGO_SECURE_HSTS_SECONDS`) once HTTPS has been solid for a while.
+3. Cutover bikeandbrew.org (runbook Phase 3, revised for the parked-domain finding) — **on hold**:
    it takes bikeandbrew.org off WordPress, whose handover to Steve is paused. Ignore
    WordPress until he says otherwise. Day 1 intake runs on staging.bikeandbrew.org.
-6. Real-passport smoke test.
-Day 1 intake runs on Krystal (staging.bikeandbrew.org if the cutover isn't done yet).
 
 Waiting on Steve: recipient lists for `DJANGO_NOTES_ALERT_EMAILS` / `DJANGO_PUBLIC_MESSAGE_ALERT_EMAILS`;
 the boss's wishes for the confirmation email design (it's a hand-coded HTML template —
@@ -134,8 +148,9 @@ admin-editable wording deferred until after Day 1).
 
 **Parked** (don't pursue unless asked): bulk email campaigns (when resumed, the first
 campaign is the data-use consent request — needs an audience rule for *not yet
-consented* bearers); load testing on Krystal staging (kit ready in `scripts/loadtest/`);
-recording Resend bounces (needs a webhook).
+consented* bearers);
+recording Resend bounces (needs a webhook). (Load testing: done 24 Sep — the kit's cleanup
+must never run once real tickets are emailed.)
 
 ## How Steve likes to work
 
@@ -153,6 +168,10 @@ recording Resend bounces (needs a webhook).
   SQLite; `passports/tests/conftest.py` blanks the Resend key and alert lists for every test.
 - New-admin-model checklist: Site Admin only sees it after a data migration grants the
   permissions (pattern: `0009`, `0014`, `0022`) — superusers see everything, so it's easy to miss.
+- `DJANGO_DEBUG` used to **default to True when unset** (now False; local dev sets
+  `DJANGO_DEBUG=True` in `.env` if wanted). Krystal staging ran with `DEBUG=True` until
+  24 Sep (no HTTPS redirect, debug error pages). Fixed in its `.env`; with DEBUG off, Krystal's
+  LiteSpeed works with `SECURE_PROXY_SSL_HEADER` (http→https 301, HSTS, secure cookies, CSRF OK).
 - Windows **PowerShell `>` writes UTF-16** — use cmd or Git Bash for `dumpdata > file`.
 - `bikeandbrew.org` is a cPanel **alias (parked domain)**: no document-root setting; check domain types with `uapi DomainInfo list_domains` in cPanel Terminal. Removing an alias can drop its DNS zone — export records first.
 - Krystal MySQL needs `?ssl_disabled=true` on `DATABASE_URL` (PyMySQL SSL handshake fails otherwise).

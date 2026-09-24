@@ -7,3 +7,6 @@ staticfiles/
 legacy/
 .pytest_cache/
 scripts/loadtest/results_*.txt
+
+# Staff data export for Railway -> Krystal copy (contains password hashes)
+reference_data.json
