@@ -65,8 +65,8 @@ Browser tests with pytest-playwright against `live_server`.
 
 ## Hosting
 
-- **Railway** — test/backup only. Project "Make Your Mark", service "BikerPassport",
-  deploys automatically from `master`; served at www.steve-newman.com. Test data only.
+- **Railway** — test site only, permanently (Steve's decision: never real data or
+  intake). Project "Make Your Mark", service "BikerPassport", deploys automatically from `master`; served at www.steve-newman.com. Test data only.
   Start command runs `migrate` + `collectstatic`. Single gunicorn worker.
   **Variable changes need a Deploy/Redeploy** before the app sees them.
 - **Krystal (production)** — shared cPanel hosting, Passenger + MySQL, same account as
@@ -107,8 +107,7 @@ with no email (tickets issued, no email); notes alert to staff; raffle CSV expor
 addresses broke it in spreadsheets); live draw revealing the winner's own issued
 ticket. Tested only locally: bulk retry, public message page (off on Railway), 10s
 timeout, data-transfer matching. Nothing tested on Krystal yet. Railway holds one test
-RaffleWinner — clear it (DEBUG-only command won't run there) if Railway becomes the
-Day 1 fallback.
+RaffleWinner (harmless: Railway is test-only).
 
 Day 1 MVP — remaining, in order (Day 1 may be brought forward at short notice).
 Steps 1–4 + smoke test are planned in detail for 24 Sep: [docs/plan_2026-09-24_krystal.md](docs/plan_2026-09-24_krystal.md).
@@ -116,10 +115,9 @@ Steps 1–4 + smoke test are planned in detail for 24 Sep: [docs/plan_2026-09-24
 2. Copy users/groups/seasons/venues Railway → Krystal: `scripts/transfer_reference_data.txt`.
 3. Krystal `.env`: `RESEND_API_KEY`, `DJANGO_DEFAULT_FROM_EMAIL`, alert email lists; send a test.
 4. Test HTTPS logins/forms on Krystal (`SECURE_PROXY_SSL_HEADER` assumes a proxy; Apache may differ).
-5. Cutover bikeandbrew.org (runbook Phase 3 — revised for the parked-domain finding). Optional for Day 1: intake can run on staging.bikeandbrew.org. Railway stays as fallback until done.
+5. Cutover bikeandbrew.org (runbook Phase 3 — revised for the parked-domain finding). Optional for Day 1: intake can run on staging.bikeandbrew.org.
 6. Real-passport smoke test.
-Fallback if Day 1 comes first: run intake on Railway (clear test data, 3–4 gunicorn
-workers, bulk-create Logger accounts), move data to Krystal later.
+Day 1 intake runs on Krystal (staging.bikeandbrew.org if the cutover isn't done yet).
 
 Waiting on Steve: recipient lists for `DJANGO_NOTES_ALERT_EMAILS` / `DJANGO_PUBLIC_MESSAGE_ALERT_EMAILS`;
 the boss's wishes for the confirmation email design (it's a hand-coded HTML template —
@@ -147,7 +145,6 @@ recording Resend bounces (needs a webhook).
   SQLite; `passports/tests/conftest.py` blanks the Resend key and alert lists for every test.
 - New-admin-model checklist: Site Admin only sees it after a data migration grants the
   permissions (pattern: `0009`, `0014`, `0022`) — superusers see everything, so it's easy to miss.
-
 - Windows **PowerShell `>` writes UTF-16** — use cmd or Git Bash for `dumpdata > file`.
 - `bikeandbrew.org` is a cPanel **alias (parked domain)**: no document-root setting; check domain types with `uapi DomainInfo list_domains` in cPanel Terminal. Removing an alias can drop its DNS zone — export records first.
 - Krystal MySQL needs `?ssl_disabled=true` on `DATABASE_URL` (PyMySQL SSL handshake fails otherwise).
