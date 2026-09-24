@@ -142,6 +142,12 @@ recording Resend bounces (needs a webhook).
 
 ## Gotchas learned the hard way
 
+- Steve's local `.env` holds the **live** settings (live Resend key, alert addresses, a
+  MySQL `DATABASE_URL`). Run tests/`manage.py` locally with `DATABASE_URL=` blanked to use
+  SQLite; `passports/tests/conftest.py` blanks the Resend key and alert lists for every test.
+- New-admin-model checklist: Site Admin only sees it after a data migration grants the
+  permissions (pattern: `0009`, `0014`, `0022`) — superusers see everything, so it's easy to miss.
+
 - Windows **PowerShell `>` writes UTF-16** — use cmd or Git Bash for `dumpdata > file`.
 - `bikeandbrew.org` is a cPanel **alias (parked domain)**: no document-root setting; check domain types with `uapi DomainInfo list_domains` in cPanel Terminal. Removing an alias can drop its DNS zone — export records first.
 - Krystal MySQL needs `?ssl_disabled=true` on `DATABASE_URL` (PyMySQL SSL handshake fails otherwise).

@@ -23,6 +23,16 @@ def _allow_test_hosts(settings):
 
 
 @pytest.fixture(autouse=True)
+def _never_send_real_email(settings):
+    # A developer's .env may hold the live Resend key and real staff
+    # addresses — tests must never reach them. Tests that check sending
+    # stub resend_client.send_email themselves.
+    settings.RESEND_API_KEY = ''
+    settings.NOTES_ALERT_EMAILS = []
+    settings.PUBLIC_MESSAGE_ALERT_EMAILS = []
+
+
+@pytest.fixture(autouse=True)
 def _use_plain_static_storage(settings):
     # live_server serves static files via Django's *finders* (straight from
     # each app's static/ source dir, unhashed) — not via STATIC_ROOT/
