@@ -78,13 +78,19 @@ Browser tests with pytest-playwright against `live_server`.
   so the sender must be `…@passports.makeyourmark.co.uk` (default
   `noreply@passports.makeyourmark.co.uk`). The bare `makeyourmark.co.uk` is NOT verified.
 
-## Current status (24 Sep 2026, mid-session — switching PCs)
+## Current status (24 Sep 2026, evening — on Steve's personal PC)
 
-**Resume** [docs/plan_2026-09-24_krystal.md](docs/plan_2026-09-24_krystal.md) at **Step 1**
-(not started yet). Prep done so far: Steve has cPanel **Terminal** access. Still to have
-ready: the virtualenv `source …` command (cPanel → Setup Python App → edit the app),
-a Resend API key named `krystal` (Sending access, domain passports.makeyourmark.co.uk —
-never paste it into chat), and the alert email address(es).
+Progress on [docs/plan_2026-09-24_krystal.md](docs/plan_2026-09-24_krystal.md):
+- **Step 1 done** — Krystal staging pulled, migrated, collectstatic, restarted; new code live.
+- **`.env` on Krystal updated** (Steve edits it with WinSCP; show hidden files) — Resend key
+  and alert vars set. Public message page is **on** there; a test message was stored.
+- **Fix pushed:** migration `0022` lets Site Admin see Public messages (was superuser-only).
+  Krystal needs `git pull` + `migrate` + restart for it.
+- **Next: Step 2** (copy users/groups/seasons/venues) tonight — Krystal has **no groups yet**,
+  and groups travel with Railway's permissions, so export only after Railway's deploy of
+  `0022` finishes. Then the confirmation-email test and the real-passport smoke test.
+- Personal PC now has a dev setup: Python 3.11 `.venv`, `pip install -r requirements-dev.txt`,
+  `playwright install chromium`; 58 tests pass.
 
 **Found today:** `bikeandbrew.org` is a **parked domain (alias)** of the account's main
 domain — not the primary domain as earlier notes said. Aliases have no document-root
