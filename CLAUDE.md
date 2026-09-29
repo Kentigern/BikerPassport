@@ -61,6 +61,11 @@ Browser tests with pytest-playwright against `live_server`.
   date (server-set), collected kit (unused passports + count, stamp, inkpad, folder, stationery),
   notes, optional reply contact. Plain text only (letters, digits, ordinary punctuation). Off
   unless `DJANGO_PUBLIC_MESSAGES_ENABLED=True`; login-page link "Ambassador? Send a venue report".
+- **Consent can't be sought by email.** MARK may not email bearers whose address it holds
+  without permission, so there is **no consent-request email campaign** (Steve, 29 Sep 2026).
+  Consent can only be recorded when the bearer gives it: in person at intake, or (future) a
+  tick box printed on the paper passport. A bearer never asked stays `pending` and falls under
+  the post-season retention purge. Intake consent checkbox: awaiting the principal's decision.
 - Physical anti-duplicate safeguard: every processed passport's **corner is snipped**
   before it's returned (nothing in the data model tracks this).
 - Three intake channels, same data model: left at a venue (volunteer collects),
@@ -92,14 +97,14 @@ Browser tests with pytest-playwright against `live_server`.
 
 ## Current status (24 Sep 2026, late evening — on Steve's personal PC)
 
-**Unreleased (29 Sep):** ambassador venue report replaces the public message form (migration
-`0023`, 78 tests pass, checked in a browser). Releasing to Krystal = `git pull`, `migrate`, restart
-(no collectstatic needed).
+**Ambassador venue report (29 Sep):** replaces the public message form (migration `0023`, 78 tests
+pass, checked in a browser). On Railway via the 29 Sep push; **not yet on Krystal** — release there
+with `git pull`, `migrate`, restart (no collectstatic) when Steve is ready for ambassadors to see it.
 
-**Next (29 Sep evening):** [docs/plan_2026-09-29.md](docs/plan_2026-09-29.md): check Railway's DB for
-passports logged there on 28 Sep, then make Railway a **test site again** with only the
-superuser active (all other accounts inactive), test alert lists, GitHub reconnected.
-**Never re-run `transfer_reference_data`** after that (it copies the inactive flag to Krystal).
+**Railway is a test site again (29 Sep):** web app running, GitHub reconnected (deploys on push to
+`master`), every pre-existing account inactive except `Kentigern`, plus Steve's new test users;
+alert lists go to Steve only; public page on. **Never re-run `transfer_reference_data`** (it would
+copy the inactive flags to Krystal).
 
 **Krystal is ready for real intake at staging.bikeandbrew.org.** Steps 1–6 of
 [docs/plan_2026-09-24_krystal.md](docs/plan_2026-09-24_krystal.md) done; step 7 (DNS prep for
@@ -162,9 +167,8 @@ the boss's wishes for the confirmation email design (it's a hand-coded HTML temp
 logo, wording, conditional messages, an existing MARK/Mailchimp design are all possible;
 admin-editable wording deferred until after Day 1).
 
-**Parked** (don't pursue unless asked): bulk email campaigns (when resumed, the first
-campaign is the data-use consent request — needs an audience rule for *not yet
-consented* bearers);
+**Parked** (don't pursue unless asked): bulk email campaigns (only ever to bearers who have
+*granted* that purpose's consent);
 recording Resend bounces (needs a webhook). (Load testing: done 24 Sep — the kit's cleanup
 must never run once real tickets are emailed.)
 
