@@ -58,9 +58,11 @@ right order, in one transaction (all or nothing).
 
 Allow about 45 minutes. Tell volunteers the address only after Step 6.
 
-### 1. Check Railway is on the current code (2 min)
-Railway deploys `master` automatically. In the Railway dashboard → BikerPassport →
-Deployments, check the latest deployment is green and matches the latest commit on GitHub.
+### 1. Start Railway's web app on the current code (5 min)
+The web app was stopped on 28 Sep 2026 (its database kept running). In the Railway
+dashboard → BikerPassport: reconnect the GitHub source (Settings → Source) if it was
+disconnected, then deploy the latest `master` (or `railway redeploy --from-source -y`).
+Check the deployment is green and www.steve-newman.com shows the login page.
 
 ### 2. Clear the test data (10 min)
 In **Command Prompt** (not PowerShell), in the repo folder:

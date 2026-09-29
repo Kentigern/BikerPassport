@@ -7,7 +7,8 @@ full spec) and [README.md](README.md) (setup). **Never put secrets in this repo*
 ## Keeping this file current
 
 Steve works on this repo from two PCs, each with its own Claude memory that does
-**not** sync — this file is the shared memory. So:
+**not** sync — this file is the shared memory. From 28 Sep 2026 his **personal PC** is the
+main one (dev setup, Railway CLI and SSH key are there); the work PC is occasional. So:
 
 - **Every push includes a CLAUDE.md update.** Before pushing, update "Current
   status", the Day 1 list, "Waiting on Steve", "Parked" and "Gotchas" to match
@@ -55,7 +56,11 @@ Browser tests with pytest-playwright against `live_server`.
   **no consent request** in it (raffle data needs none). Failures set
   `email_send_failed`; staff retry via the admin action or `retry_confirmation_emails`.
 - **Notes alert**: Save & Exit with anything in Notes emails `DJANGO_NOTES_ALERT_EMAILS`.
-- **Public message page** `/message/`: off unless `DJANGO_PUBLIC_MESSAGES_ENABLED=True`.
+- **Public page** `/message/` is the **ambassador venue report** (since 29 Sep 2026; was a general
+  contact form): ambassador name/number, venue name/number (must be a real venue), today's
+  date (server-set), collected kit (unused passports + count, stamp, inkpad, folder, stationery),
+  notes, optional reply contact. Plain text only (letters, digits, ordinary punctuation). Off
+  unless `DJANGO_PUBLIC_MESSAGES_ENABLED=True`; login-page link "Ambassador? Send a venue report".
 - Physical anti-duplicate safeguard: every processed passport's **corner is snipped**
   before it's returned (nothing in the data model tracks this).
 - Three intake channels, same data model: left at a venue (volunteer collects),
@@ -65,11 +70,13 @@ Browser tests with pytest-playwright against `live_server`.
 
 ## Hosting
 
-- **Railway** — the test site, and the planned **fallback** for real intake if Krystal
+- **Railway** — **web app stopped 28 Sep 2026** (Krystal is live); Postgres left running with
+  staff/venue data. Restart = redeploy the BikerPassport service. Was the test site, and is the planned **fallback** for real intake if Krystal
   can't be used: [docs/railway_fallback.md](docs/railway_fallback.md) (plan only, deliberately
   not pre-built; recovery takes ~half a day, starting with building `reset_intake_data`). Only one site may take intake at a time.
   Project "Make Your Mark", service "BikerPassport", deploys automatically from `master`;
-  served at www.steve-newman.com. Test data only.
+  served at www.steve-newman.com (404 while stopped). Test data only. Disconnect the GitHub
+  source in Railway settings, or any push to `master` restarts it.
   Start command runs `migrate` + `collectstatic`. Single gunicorn worker.
   **Variable changes need a Deploy/Redeploy** before the app sees them.
 - **Krystal (production)** — shared cPanel hosting, Passenger + MySQL, same account as
@@ -84,6 +91,15 @@ Browser tests with pytest-playwright against `live_server`.
   `noreply@passports.makeyourmark.co.uk`). The bare `makeyourmark.co.uk` is NOT verified.
 
 ## Current status (24 Sep 2026, late evening — on Steve's personal PC)
+
+**Unreleased (29 Sep):** ambassador venue report replaces the public message form (migration
+`0023`, 78 tests pass, checked in a browser). Releasing to Krystal = `git pull`, `migrate`, restart
+(no collectstatic needed).
+
+**Next (29 Sep evening):** [docs/plan_2026-09-29.md](docs/plan_2026-09-29.md): check Railway's DB for
+passports logged there on 28 Sep, then make Railway a **test site again** with only the
+superuser active (all other accounts inactive), test alert lists, GitHub reconnected.
+**Never re-run `transfer_reference_data`** after that (it copies the inactive flag to Krystal).
 
 **Krystal is ready for real intake at staging.bikeandbrew.org.** Steps 1–6 of
 [docs/plan_2026-09-24_krystal.md](docs/plan_2026-09-24_krystal.md) done; step 7 (DNS prep for

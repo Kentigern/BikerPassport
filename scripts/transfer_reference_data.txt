@@ -1,6 +1,10 @@
 TRANSFER REFERENCE DATA: Railway (test) -> Krystal (production)
 ==============================================================
 
+*** DO NOT RUN AGAIN (from 29 Sep 2026). Railway is a test site where every
+*** account except the superuser is inactive. This copy includes the active
+*** flag, so it would lock the real volunteers out of Krystal. Kept for reference.
+
 Copies staff Users, Groups (with their permissions), each user's group
 memberships, Seasons and Venues. Nothing else: no bearers, submissions,
 raffle tickets or messages.
