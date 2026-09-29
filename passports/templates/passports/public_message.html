@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Contact the organisers — Bike + Brew</title>
+  <title>Ambassador venue report — Bike + Brew</title>
   <link rel="icon" href="https://makeyourmark.co.uk/wp-content/uploads/2025/08/MARK-Favicon-100x100.png">
   <style>
     body {
@@ -35,6 +35,14 @@
       color: #efdaa4;
     }
     textarea { resize: vertical; }
+    input[readonly] { background: transparent; border-style: dashed; color: #c9b998; }
+    .collected { border: 1px solid #665f5f; border-radius: 6px; margin: 1.5rem 0 0; padding: .5rem 1rem 1rem; }
+    .collected legend { font-weight: bold; font-size: .95rem; padding: 0 .4rem; }
+    label.check { display: flex; align-items: center; gap: .6rem; font-weight: normal; margin: .75rem 0 0; cursor: pointer; }
+    label.check input { width: 1.2rem; height: 1.2rem; margin: 0; accent-color: #efdaa4; }
+    .collected-count { margin-left: 1.8rem; }
+    .collected-count label { font-weight: normal; margin-top: .5rem; }
+    .collected-count input { max-width: 8rem; }
     .hint { color: #a89a7d; font-size: .85rem; margin-top: .3rem; }
     .errorlist { color: #e6a3a3; list-style: none; padding: 0; margin: .3rem 0 0; font-size: .9rem; }
     .error-box { background: rgba(230, 163, 163, .12); color: #e6a3a3; padding: .75rem 1rem; border-radius: 6px; margin-bottom: 1rem; }
@@ -60,12 +68,13 @@
 <div class="card">
   {% if sent %}
     <h1>Thank you</h1>
-    <p class="intro">Your message has been sent to the Bike + Brew organisers.</p>
+    <p class="intro">Your venue report has been sent to the Bike + Brew organisers.</p>
   {% else %}
-    <h1>Contact the organisers</h1>
-    <p class="intro">Questions about your Bike + Brew passport, stamps or the raffle? Send the organisers a short message. Plain text only.</p>
+    <h1>Ambassador venue report</h1>
+    <p class="intro">Let the Bike + Brew organisers know what you collected from a venue. Letters, numbers and ordinary punctuation only.</p>
 
     {% if error %}<div class="error-box">{{ error }}</div>{% endif %}
+    {% if form.errors %}<div class="error-box">Please check the messages below each box.</div>{% endif %}
 
     <form method="post" novalidate>
       {% csrf_token %}
@@ -75,21 +84,50 @@
       {{ form.name }}
       {{ form.name.errors }}
 
-      <label for="{{ form.reply_to.id_for_label }}">{{ form.reply_to.label }}</label>
-      {{ form.reply_to }}
-      {{ form.reply_to.errors }}
+      <label for="{{ form.ambassador_number.id_for_label }}">{{ form.ambassador_number.label }}</label>
+      {{ form.ambassador_number }}
+      {{ form.ambassador_number.errors }}
+
+      <label for="report-date">Date</label>
+      <input type="text" id="report-date" value="{{ today|date:'j F Y' }}" readonly disabled>
+
+      <label for="{{ form.venue_name.id_for_label }}">{{ form.venue_name.label }}</label>
+      {{ form.venue_name }}
+      {{ form.venue_name.errors }}
+
+      <label for="{{ form.venue_number.id_for_label }}">{{ form.venue_number.label }}</label>
+      {{ form.venue_number }}
+      {{ form.venue_number.errors }}
+
+      <fieldset class="collected">
+        <legend>Collected from the venue</legend>
+        <label class="check">{{ form.unused_passports }} {{ form.unused_passports.label }}</label>
+        <div class="collected-count">
+          <label for="{{ form.passports_collected.id_for_label }}">{{ form.passports_collected.label }}</label>
+          {{ form.passports_collected }}
+          {{ form.passports_collected.errors }}
+        </div>
+        <label class="check">{{ form.stamp }} {{ form.stamp.label }}</label>
+        <label class="check">{{ form.inkpad }} {{ form.inkpad.label }}</label>
+        <label class="check">{{ form.folder }} {{ form.folder.label }}</label>
+        <label class="check">{{ form.unused_stationery }} {{ form.unused_stationery.label }}</label>
+      </fieldset>
 
       <label for="{{ form.message.id_for_label }}">{{ form.message.label }}</label>
       {{ form.message }}
-      <p class="hint">Up to 2,000 characters.</p>
+      <p class="hint">Optional. Up to 2,000 characters.</p>
       {{ form.message.errors }}
+
+      <label for="{{ form.reply_to.id_for_label }}">{{ form.reply_to.label }}</label>
+      {{ form.reply_to }}
+      {{ form.reply_to.errors }}
 
       <div class="hp" aria-hidden="true">
         <label for="id_website">Leave this empty</label>
         <input type="text" name="website" id="id_website" tabindex="-1" autocomplete="off">
       </div>
 
-      <button type="submit">Send message</button>
+      <button type="submit">Send report</button>
     </form>
   {% endif %}
 

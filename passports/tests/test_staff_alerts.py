@@ -1,5 +1,6 @@
 import pytest
 from django.core.cache import cache
+from django.utils import timezone
 
 from passports.models import PassportSubmission, PublicMessage
 
@@ -73,8 +74,12 @@ class TestNotesAlert:
 
 
 class TestPublicMessage:
+    """The public /message/ page: an ambassador's venue report."""
+
+    NOTES = "Owner's away till Friday.\nKit left at the bar - see Sam!"
+
     @pytest.fixture(autouse=True)
-    def _enabled(self, settings, monkeypatch):
+    def _enabled(self, settings, monkeypatch, venues):
         settings.PUBLIC_MESSAGES_ENABLED = True
         settings.PUBLIC_MESSAGE_ALERT_EMAILS = ['ops@example.com']
         monkeypatch.setattr('passports.public_views.MIN_FILL_SECONDS', 0)
@@ -83,32 +88,106 @@ class TestPublicMessage:
     def _post(self, client, **overrides):
         page = client.get('/message/')
         started = page.context['started']
-        data = {'name': 'Pat', 'reply_to': 'pat@example.com', 'message': 'When is the raffle?', 'website': '', 'started': started}
+        data = {
+            'name': 'Pat Jones', 'ambassador_number': '17', 'venue_name': 'The Old Mill', 'venue_number': '5',
+            'unused_passports': 'on', 'passports_collected': '12', 'stamp': 'on',
+            'message': self.NOTES, 'reply_to': 'pat@example.com', 'website': '', 'started': started,
+        }
         data.update(overrides)
-        return client.post('/message/', data=data)
+        # None = leave the field out entirely (an unticked checkbox).
+        return client.post('/message/', data={k: v for k, v in data.items() if v is not None})
 
     def test_disabled_by_default_is_404(self, client, settings):
         settings.PUBLIC_MESSAGES_ENABLED = False
         assert client.get('/message/').status_code == 404
 
-    def test_anonymous_message_is_stored_and_emailed(self, client, sent):
+    def test_report_is_stored_and_emailed(self, client, sent):
         resp = self._post(client)
 
         assert resp.status_code == 302 and resp['Location'].endswith('?sent=1')
-        message = PublicMessage.objects.get()
-        assert (message.name, message.reply_to, message.message) == ('Pat', 'pat@example.com', 'When is the raffle?')
-        assert message.alert_sent is True
+        report = PublicMessage.objects.get()
+        assert (report.name, report.ambassador_number, report.venue_name, report.venue_number) == (
+            'Pat Jones', 17, 'The Old Mill', 5,
+        )
+        assert (report.unused_passports, report.passports_collected, report.stamp, report.inkpad) == (True, 12, True, False)
+        assert report.message == self.NOTES
+        assert report.report_date == timezone.localdate()
+        assert report.alert_sent is True
         assert sent[0]['to'] == ['ops@example.com']
-        assert 'When is the raffle?' in sent[0]['text_body']
+        assert sent[0]['subject'] == 'Ambassador report: venue 5 The Old Mill'
+        body = sent[0]['text_body']
+        for expected in ('Pat Jones (no. 17)', 'The Old Mill (no. 5)', 'Unused passports (12), Stamp', 'see Sam!'):
+            assert expected in body, expected
         assert client.get(resp['Location']).status_code == 200
 
-    def test_message_is_text_only(self, client, sent):
-        self._post(client, message='<script>alert(1)</script> hi')
-        assert '<script>' not in sent[0]['html_body']
-        assert '&lt;script&gt;' in sent[0]['html_body']
+    def test_page_shows_todays_date_and_it_cannot_be_set(self, client, sent):
+        page = client.get('/message/')
+        assert timezone.localdate().strftime('%B %Y').encode() in page.content
+        self._post(client, report_date='2020-01-01')
+        assert PublicMessage.objects.get().report_date == timezone.localdate()
 
-    def test_name_cannot_inject_subject_lines(self, client, sent):
-        self._post(client, name='Pat\r\nBcc: evil@example.com')
+    @pytest.mark.parametrize('field', ['name', 'ambassador_number', 'venue_name', 'venue_number'])
+    def test_names_and_numbers_are_required(self, client, sent, field):
+        resp = self._post(client, **{field: ''})
+        assert resp.status_code == 200 and field in resp.context['form'].errors
+        assert not PublicMessage.objects.exists() and sent == []
+
+    def test_checkboxes_notes_and_contact_are_optional(self, client, sent):
+        resp = self._post(client, unused_passports=None, passports_collected='', stamp=None, message='', reply_to='')
+        assert resp.status_code == 302
+        report = PublicMessage.objects.get()
+        assert report.collected_summary() == 'Nothing' and report.message == ''
+        assert '(none)' in sent[0]['text_body']
+
+    @pytest.mark.parametrize('field,value', [
+        ('ambassador_number', '17a'),
+        ('ambassador_number', '0'),
+        ('venue_number', 'five'),
+        ('passports_collected', '1.5'),
+    ])
+    def test_numbers_are_whole_numbers(self, client, sent, field, value):
+        resp = self._post(client, **{field: value})
+        assert resp.status_code == 200 and field in resp.context['form'].errors
+        assert not PublicMessage.objects.exists()
+
+    def test_venue_number_must_be_a_real_venue(self, client, sent):
+        resp = self._post(client, venue_number='999')
+        assert 'no venue number 999' in resp.context['form'].errors['venue_number'][0]
+        assert not PublicMessage.objects.exists()
+
+    def test_unused_passports_needs_a_count(self, client, sent):
+        resp = self._post(client, passports_collected='')
+        assert 'passports_collected' in resp.context['form'].errors
+        assert not PublicMessage.objects.exists()
+
+    def test_a_count_ticks_unused_passports(self, client, sent):
+        self._post(client, unused_passports=None, passports_collected='3')
+        report = PublicMessage.objects.get()
+        assert report.unused_passports is True and report.passports_collected == 3
+
+    @pytest.mark.parametrize('field,value', [
+        ('name', 'Pat <b>Jones</b>'),
+        ('venue_name', 'Mill {cafe}'),
+        ('message', '<script>alert(1)</script>'),
+        ('message', 'Great day \U0001F600'),
+        ('reply_to', 'pat=example'),
+    ])
+    def test_plain_text_only(self, client, sent, field, value):
+        resp = self._post(client, **{field: value})
+        assert resp.status_code == 200 and field in resp.context['form'].errors
+        assert not PublicMessage.objects.exists() and sent == []
+
+    def test_accents_and_punctuation_are_fine(self, client, sent):
+        resp = self._post(client, name="Siân O'Brien-Hughes", venue_name='Café & Co. (Mill St.)')
+        assert resp.status_code == 302
+        assert PublicMessage.objects.get().name == "Siân O'Brien-Hughes"
+
+    def test_ampersand_is_escaped_in_the_html_email(self, client, sent):
+        self._post(client, message='Tea & cake')
+        assert 'Tea &amp; cake' in sent[0]['html_body']
+
+    def test_names_cannot_inject_subject_lines(self, client, sent):
+        self._post(client, venue_name='Mill\r\nBcc: evil@example.com', name='Pat\r\nJones')
         assert '\n' not in sent[0]['subject'] and '\r' not in sent[0]['subject']
 
     def test_honeypot_is_silently_dropped(self, client, sent):
@@ -131,6 +210,14 @@ class TestPublicMessage:
         assert PublicMessage.objects.count() == 5
 
     def test_login_page_links_to_it_only_when_enabled(self, client, settings):
-        assert b'Contact the organisers' in client.get('/admin/login/').content
+        assert b'Send a venue report' in client.get('/admin/login/').content
         settings.PUBLIC_MESSAGES_ENABLED = False
-        assert b'Contact the organisers' not in client.get('/admin/login/').content
+        assert b'Send a venue report' not in client.get('/admin/login/').content
+
+    def test_admin_lists_reports(self, client, django_user_model, sent):
+        self._post(client)
+        admin = django_user_model.objects.create_superuser(username='admin', email='a@example.com', password='x')
+        client.force_login(admin)
+        page = client.get('/admin/passports/publicmessage/')
+        assert page.status_code == 200
+        assert b'The Old Mill' in page.content and b'Unused passports (12), Stamp' in page.content

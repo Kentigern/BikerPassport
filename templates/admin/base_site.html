@@ -56,7 +56,7 @@
 {{ block.super }}
 {% if public_messages_enabled and request.resolver_match.url_name == 'login' %}
 <p style="text-align: center; margin: 1.5rem 0;">
-  Not a volunteer? <a href="{% url 'public_message' %}">Contact the organisers</a>
+  Ambassador? <a href="{% url 'public_message' %}">Send a venue report</a>
 </p>
 {% endif %}
 {% endblock %}

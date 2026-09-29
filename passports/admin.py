@@ -231,18 +231,30 @@ class PassportSubmissionAdmin(SimpleHistoryAdmin):
 
 @admin.register(PublicMessage)
 class PublicMessageAdmin(admin.ModelAdmin):
-    """Messages from the public /message/ page. Everything the sender wrote
-    is read-only (it's their message, and the record of it); staff only
-    tick `handled` once it's dealt with — straight from the list."""
+    """Ambassador venue reports from the public /message/ page (older rows:
+    general messages). Everything the sender wrote is read-only (it's their
+    report, and the record of it); staff only tick `handled` once it's dealt
+    with — straight from the list."""
 
-    list_display = ['created_at', 'name', 'reply_to', 'short_message', 'alert_sent', 'handled']
+    list_display = [
+        'created_at', 'name', 'ambassador_number', 'venue_number', 'venue_name',
+        'collected', 'short_message', 'alert_sent', 'handled',
+    ]
     list_editable = ['handled']
-    list_filter = ['handled', 'alert_sent']
-    search_fields = ['name', 'reply_to', 'message']
-    readonly_fields = ['name', 'reply_to', 'message', 'created_at', 'alert_sent']
-    fields = ['created_at', 'name', 'reply_to', 'message', 'alert_sent', 'handled']
+    list_filter = ['handled', 'alert_sent', 'report_date']
+    search_fields = ['name', 'venue_name', 'reply_to', 'message']
+    fields = [
+        'created_at', 'report_date', 'name', 'ambassador_number', 'venue_name', 'venue_number',
+        'unused_passports', 'passports_collected', 'stamp', 'inkpad', 'folder', 'unused_stationery',
+        'message', 'reply_to', 'alert_sent', 'handled',
+    ]
+    readonly_fields = [f for f in fields if f != 'handled']
 
-    @admin.display(description='Message')
+    @admin.display(description='Collected')
+    def collected(self, obj):
+        return obj.collected_summary()
+
+    @admin.display(description='Notes')
     def short_message(self, obj):
         return obj.message if len(obj.message) <= 80 else obj.message[:77] + '…'
 

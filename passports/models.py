@@ -501,17 +501,32 @@ class EmailCampaignRecipient(models.Model):
 
 
 class PublicMessage(models.Model):
-    """A text-only message sent by an unauthenticated visitor from the
-    public /message/ page (off unless settings.PUBLIC_MESSAGES_ENABLED).
-    Stored here as the record, and emailed to
-    settings.PUBLIC_MESSAGE_ALERT_EMAILS. Deliberately minimal: no files,
-    no HTML, no IP address kept."""
+    """An ambassador's venue report, sent without logging in from the
+    public /message/ page (off unless settings.PUBLIC_MESSAGES_ENABLED):
+    who, which venue, which kit they collected, and notes. Stored here as
+    the record, and emailed to settings.PUBLIC_MESSAGE_ALERT_EMAILS.
+    Deliberately minimal: no files, no HTML, no IP address kept.
 
-    name = models.CharField(max_length=100, blank=True)
+    Rows from before 29 Sep 2026 are general "contact the organisers"
+    messages: only name / reply_to / message are filled in."""
+
+    name = models.CharField('ambassador name', max_length=100, blank=True)
+    ambassador_number = models.PositiveIntegerField(null=True, blank=True)
+    report_date = models.DateField(
+        null=True, blank=True, help_text="The day the report was sent (set automatically)."
+    )
+    venue_name = models.CharField(max_length=200, blank=True)
+    venue_number = models.PositiveIntegerField(null=True, blank=True)
+    unused_passports = models.BooleanField('unused passports', default=False)
+    passports_collected = models.PositiveIntegerField('number collected', null=True, blank=True)
+    stamp = models.BooleanField(default=False)
+    inkpad = models.BooleanField(default=False)
+    folder = models.BooleanField(default=False)
+    unused_stationery = models.BooleanField('unused stationery', default=False)
     reply_to = models.CharField(
         max_length=200, blank=True, help_text="Email or phone the sender gave for a reply (optional)."
     )
-    message = models.TextField(max_length=2000)
+    message = models.TextField('notes', max_length=2000, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     alert_sent = models.BooleanField(default=False, help_text="Whether the staff alert email went out.")
     handled = models.BooleanField(default=False, help_text="Tick once someone has dealt with this message.")
@@ -519,5 +534,23 @@ class PublicMessage(models.Model):
     class Meta:
         ordering = ['-created_at']
 
+    COLLECTED_ITEMS = [
+        ('unused_passports', 'Unused passports'),
+        ('stamp', 'Stamp'),
+        ('inkpad', 'Inkpad'),
+        ('folder', 'Folder'),
+        ('unused_stationery', 'Unused stationery'),
+    ]
+
     def __str__(self):
         return f"{self.name or 'Anonymous'} — {self.created_at:%Y-%m-%d %H:%M}"
+
+    def collected_summary(self):
+        """e.g. "Unused passports (12), Stamp, Folder" — or "Nothing"."""
+        items = []
+        for field, label in self.COLLECTED_ITEMS:
+            if getattr(self, field):
+                if field == 'unused_passports' and self.passports_collected is not None:
+                    label = f'{label} ({self.passports_collected})'
+                items.append(label)
+        return ', '.join(items) or 'Nothing'

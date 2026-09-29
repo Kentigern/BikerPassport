@@ -1,5 +1,5 @@
-"""The only page in the app anyone can use without logging in: a text-only
-message to the organisers. Kept apart from views.py (where every view
+"""The only page in the app anyone can use without logging in: an
+ambassador's text-only venue report to the organisers. Kept apart from views.py (where every view
 requires staff login) so what's reachable anonymously is obvious.
 
 Off unless settings.PUBLIC_MESSAGES_ENABLED. Abuse controls, all cheap and
@@ -86,21 +86,25 @@ def public_message_view(request):
             if _rate_limited(request):
                 error = "Sorry, we can't accept more messages right now — please try again in an hour."
             else:
-                message = form.save()
+                message = form.save(commit=False)
+                message.report_date = timezone.localdate()  # never from the form
+                message.save()
                 admin_path = reverse('admin:passports_publicmessage_change', args=[message.pk])
                 message.alert_sent = send_staff_alert(
                     settings.PUBLIC_MESSAGE_ALERT_EMAILS,
-                    subject=f'Website message from {message.name or "an anonymous visitor"}',
-                    heading='New message from the passport website',
-                    message_label='Message',
-                    message=message.message,
+                    subject=f'Ambassador report: venue {message.venue_number} {message.venue_name}',
+                    heading='New ambassador report from the passport website',
+                    message_label='Notes',
+                    message=message.message or '(none)',
                     details=[
-                        ('From', message.name or '(not given)'),
+                        ('Ambassador', f'{message.name} (no. {message.ambassador_number})'),
+                        ('Venue', f'{message.venue_name} (no. {message.venue_number})'),
+                        ('Date', message.report_date.strftime('%d %b %Y')),
+                        ('Collected', message.collected_summary()),
                         ('Reply to', message.reply_to or '(not given)'),
-                        ('Received', timezone.localtime(message.created_at).strftime('%d %b %Y %H:%M')),
                     ],
                     link_url=f'{settings.PUBLIC_BASE_URL}{admin_path}',
-                    link_text='Open this message in the admin',
+                    link_text='Open this report in the admin',
                 )
                 message.save(update_fields=['alert_sent'])
                 return redirect(f"{reverse('public_message')}?sent=1")
@@ -108,4 +112,8 @@ def public_message_view(request):
         form = PublicMessageForm()
 
     started = signing.TimestampSigner(salt=_SIGNER_SALT).sign(str(timezone.now().timestamp()))
-    return render(request, 'passports/public_message.html', {'form': form, 'started': started, 'error': error})
+    return render(
+        request,
+        'passports/public_message.html',
+        {'form': form, 'started': started, 'error': error, 'today': timezone.localdate()},
+    )
