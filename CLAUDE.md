@@ -111,6 +111,10 @@ box and says "1 stamp"/"2 stamps" (migration `0024`); intake consent questions (
 Business rules); MariaDB fixes (see Gotchas). Krystal release: `git pull`, `migrate`,
 `collectstatic` (intake.js changed), restart — and check the MariaDB strict mode comes up clean.
 
+**Krystal releases** use [scripts/deploy_krystal.sh](scripts/deploy_krystal.sh) (pull, `check`, `migrate`,
+`collectstatic`, restart, login-page check; stops at the first failure). In cPanel Terminal/SSH:
+`bash ~/bikerpassport/scripts/deploy_krystal.sh` — the first time, `git pull` first so the script is there.
+
 **Ambassador venue report (29 Sep):** replaces the public message form (migration `0023`, 78 tests
 pass, checked in a browser). On Railway via the 29 Sep push; **not yet on Krystal** — release there
 with `git pull`, `migrate`, restart (no collectstatic) when Steve is ready for ambassadors to see it.
