@@ -151,6 +151,17 @@ else:
         }
     }
 
+# MySQL/MariaDB (Krystal): strict mode, so over-long or invalid values are
+# refused instead of silently truncated (Django's mysql.W002).
+if DATABASES['default']['ENGINE'] == 'django.db.backends.mysql':
+    DATABASES['default'].setdefault('OPTIONS', {}).setdefault(
+        'init_command', "SET sql_mode='STRICT_TRANS_TABLES'"
+    )
+
+# MariaDB can't create the "one current season" conditional constraint;
+# Season.save() enforces the rule itself on every database instead.
+SILENCED_SYSTEM_CHECKS = ['models.W036']
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

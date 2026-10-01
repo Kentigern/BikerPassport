@@ -585,6 +585,7 @@ def bearer_save_view(request):
                 'email': bearer.email,
                 'phone': bearer.phone,
                 'mailing_address': bearer.mailing_address,
+                **{field: getattr(bearer, field) for field in Bearer.CONSENT_FIELDS},
             },
         }
     )
@@ -628,6 +629,16 @@ def submission_save_view(request):
         )
         if denied:
             return denied
+
+    # The consent answers are sent with every save as well as with "Save
+    # bearer", so one changed after the bearer was saved isn't lost.
+    consent = {}
+    for field in Bearer.CONSENT_FIELDS:
+        value = request.POST.get(field)
+        if value:
+            if value not in ConsentStatus.values:
+                return JsonResponse({'ok': False, 'errors': {field: ['Not a valid answer.']}}, status=400)
+            consent[field] = value
 
     venues = Venue.objects.filter(pk__in=request.POST.getlist('venues_stamped'), is_active=True)
     date_received = parse_date(request.POST.get('date_received', '')) or timezone.localdate()
@@ -691,6 +702,10 @@ def submission_save_view(request):
             {'ok': False, 'errors': {'bearer_id': ['This bearer already has a different submission this season.']}},
             status=400,
         )
+
+    changed = [name for field, value in consent.items() for name in bearer.set_consent(field, value)]
+    if changed:
+        bearer.save(update_fields=changed)
 
     # Save & Exit closes this submission out for good — see
     # access.is_submission_editable/is_bearer_editable, which a Logger
@@ -777,6 +792,7 @@ def bearer_search_view(request):
                         'email': b.email,
                         'phone': b.phone,
                         'mailing_address': b.mailing_address,
+                        **{field: getattr(b, field) for field in Bearer.CONSENT_FIELDS},
                         'submission_id': existing.pk if existing else None,
                         'needs_phone': False,
                     }
@@ -938,12 +954,10 @@ def email_unsubscribe_view(request, token, purpose):
         raise Http404
 
     bearer = get_object_or_404(Bearer, consent_token=token)
-    field = 'next_season_consent_status' if purpose == EmailCampaign.Purpose.NEXT_SEASON else 'marketing_consent_status'
-    responded_field = f'{field.removesuffix("_status")}_responded_at'
-
-    setattr(bearer, field, ConsentStatus.DECLINED)
-    setattr(bearer, responded_field, timezone.now())
-    bearer.save(update_fields=[field, responded_field])
+    # Every campaign purpose is marketing, so unsubscribing withdraws that.
+    changed = bearer.set_consent('marketing_consent_status', ConsentStatus.DECLINED)
+    if changed:
+        bearer.save(update_fields=changed)
 
     purpose_label = dict(EmailCampaign.Purpose.choices)[purpose]
     return render(request, 'passports/unsubscribe_confirm.html', {'purpose_label': purpose_label})

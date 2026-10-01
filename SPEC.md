@@ -91,8 +91,9 @@ The charity wants to **retain bearers' personal data** (for future seasons, news
 
 Processing model:
 - Every submission's personal data is retained **at minimum** through the end of the current season's raffle (that's an unavoidable, legitimate use — you can't run the raffle or contact a winner without it).
-- The confirmation email (§5.3) asks the bearer for permission to keep their details **longer term** (e.g. "so we can contact you about next year's Bike + Brew"). The email includes a link to a single, no-login, token-based consent page — the one deliberate exception to "no bearer-facing UI" (§3, §8) — where the bearer clicks Yes or No.
-- Each Bearer record carries a **consent status**: `pending` (email sent, no response yet), `granted`, or `declined`. Response date is recorded for audit.
+- **Revised 1 Oct 2026:** consent is **not** sought by email (emailing bearers to ask for permission doesn't comply with UK law). Instead the volunteer entering the passport asks the bearer two separate questions, recorded in the capture form's bearer section: may Make Your Mark **keep their contact details** after this season, and may it **use them for marketing**.
+- Each Bearer record carries a status per question: `pending` (shown as "Not set" — not asked; the default), `granted`, or `declined`, plus the date it was answered, for audit.
+- Planned: before the data is used, an email to bearers who said Yes setting out what Make Your Mark intends to do with it, with a no-login, token-based link to withdraw permission.
 - **Declined or non-responding** bearers: their personal data (name, address, phone, email) is scheduled for deletion/anonymization once the legitimate-use window closes (end-of-season raffle processing complete + some grace period — exact period TBD, see §9). Aggregate, non-identifying data (stamp counts, cafe popularity) can be retained indefinitely for reporting.
 - **Granted** bearers: personal data retained per the charity's ongoing retention policy (no automatic purge).
 - Admin needs a way to run/review the purge (§5.5 consent report) rather than it happening invisibly — a charity handling personal data should be able to show what it did and when.

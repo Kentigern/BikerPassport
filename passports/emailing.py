@@ -25,19 +25,15 @@ logger = logging.getLogger(__name__)
 # and 429s would just turn straight back into email_send_failed.
 BULK_SEND_INTERVAL_SECONDS = 0.6
 
-PURPOSE_CONSENT_FIELD = {
-    EmailCampaign.Purpose.NEXT_SEASON: 'next_season_consent_status',
-    EmailCampaign.Purpose.MARKETING: 'marketing_consent_status',
-}
-
-
 def qualifying_bearers(purpose):
-    """Every bearer eligible for a campaign with this purpose: consent
-    granted for that specific purpose, and an email address on file.
-    Single source of truth — used for both the compose page's live
-    count and the actual send snapshot, so they can never disagree."""
-    field = PURPOSE_CONSENT_FIELD[purpose]
-    return Bearer.objects.filter(**{field: 'granted'}).exclude(email='')
+    """Every bearer eligible for a campaign: both consents asked at intake
+    granted (keep contact details, and use them for marketing — every
+    campaign purpose is marketing), and an email address on file. Single
+    source of truth — used for both the compose page's live count and the
+    actual send snapshot, so they can never disagree."""
+    return Bearer.objects.filter(
+        retention_consent_status='granted', marketing_consent_status='granted'
+    ).exclude(email='')
 
 
 def snapshot_recipients(campaign):

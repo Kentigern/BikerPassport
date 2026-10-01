@@ -3,17 +3,59 @@ import re
 from django import forms
 from django.core.validators import MinValueValidator
 
-from .models import Bearer, PublicMessage, Venue
+from .models import Bearer, ConsentStatus, PublicMessage, Venue
 from .phone import normalize_uk_phone
 
 
+CONSENT_CHOICES = [
+    (ConsentStatus.PENDING, 'Not set'),
+    (ConsentStatus.GRANTED, 'Yes'),
+    (ConsentStatus.DECLINED, 'No'),
+]
+
+
 class BearerForm(forms.ModelForm):
+    """The intake form's bearer section. The two consent questions are asked
+    by the volunteer; left out of a POST, they keep their current value."""
+
     class Meta:
         model = Bearer
-        fields = ['name', 'email', 'mailing_address', 'phone']
+        fields = ['name', 'email', 'mailing_address', 'phone', *Bearer.CONSENT_FIELDS]
+        labels = {
+            'retention_consent_status': 'May Make Your Mark keep their contact details after this season?',
+            'marketing_consent_status': 'May Make Your Mark use their contact details for marketing (events, merchandise)?',
+        }
         widgets = {
             'mailing_address': forms.Textarea(attrs={'rows': 3}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name in Bearer.CONSENT_FIELDS:
+            field = self.fields[name]
+            field.choices = CONSENT_CHOICES
+            field.widget = forms.RadioSelect(choices=CONSENT_CHOICES)
+            field.required = False
+            field.help_text = ''
+
+    def _clean_consent(self, name):
+        return self.cleaned_data[name] or getattr(self.instance, name)
+
+    def clean_retention_consent_status(self):
+        return self._clean_consent('retention_consent_status')
+
+    def clean_marketing_consent_status(self):
+        return self._clean_consent('marketing_consent_status')
+
+    def save(self, commit=True):
+        # Route the consent answers through set_consent so the answer date is stamped.
+        bearer = super().save(commit=False)
+        for name in Bearer.CONSENT_FIELDS:
+            setattr(bearer, name, self.initial.get(name, ConsentStatus.PENDING))
+            bearer.set_consent(name, self.cleaned_data[name])
+        if commit:
+            bearer.save()
+        return bearer
 
     def clean_phone(self):
         normalized = normalize_uk_phone(self.cleaned_data['phone'])
@@ -49,7 +91,7 @@ class PublicMessageForm(forms.ModelForm):
         model = PublicMessage
         fields = [
             'name', 'ambassador_number', 'venue_name', 'venue_number',
-            'unused_passports', 'passports_collected', 'stamp', 'inkpad', 'folder', 'unused_stationery',
+            'unused_passports', 'passports_collected', 'stamp', 'second_stamp', 'inkpad', 'folder', 'unused_stationery',
             'message', 'reply_to',
         ]
         labels = {
@@ -58,6 +100,7 @@ class PublicMessageForm(forms.ModelForm):
             'venue_name': 'Venue name',
             'venue_number': 'Venue number',
             'unused_passports': 'Unused passports',
+            'second_stamp': '2nd stamp',
             'passports_collected': 'Number collected',
             'unused_stationery': 'Unused stationery',
             'message': 'Notes',

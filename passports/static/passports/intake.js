@@ -172,6 +172,21 @@
     mailing_address: document.getElementById('id_mailing_address'),
   };
 
+  // The two consent questions (Not set / Yes / No radios).
+  var consentFields = ['retention_consent_status', 'marketing_consent_status'];
+  var getConsent = function (field) {
+    var checked = document.querySelector('input[name="' + field + '"]:checked');
+    return checked ? checked.value : '';
+  };
+  var setConsent = function (field, value) {
+    var radio = document.querySelector('input[name="' + field + '"][value="' + value + '"]');
+    if (radio) radio.checked = true;
+  };
+  var addConsent = function (data) {
+    consentFields.forEach(function (field) { data[field] = getConsent(field); });
+    return data;
+  };
+
   if (searchInput) {
     var resultsBox = document.getElementById('bearer-search-results');
     var matchNote = document.getElementById('bearer-match-note');
@@ -256,6 +271,7 @@
       bearerFields.email.value = bearer.email;
       bearerFields.phone.value = bearer.phone;
       bearerFields.mailing_address.value = bearer.mailing_address;
+      consentFields.forEach(function (field) { setConsent(field, bearer[field]); });
       bearerIdField.value = bearer.id;
       matchNote.textContent = 'Matched existing bearer — saving will update their record.';
       matchNote.style.display = 'block';
@@ -281,13 +297,13 @@
   var venueSaveStatuses = document.querySelectorAll('.venue-save-status');
 
   bearerSaveBtn.addEventListener('click', function () {
-    postForm('/passports/bearers/save/', {
+    postForm('/passports/bearers/save/', addConsent({
       bearer_id: bearerIdField.value,
       name: bearerFields.name.value,
       email: bearerFields.email.value,
       phone: bearerFields.phone.value,
       mailing_address: bearerFields.mailing_address.value,
-    }).then(function (result) {
+    })).then(function (result) {
       if (result.data.ok) {
         bearerIdField.value = result.data.bearer.id;
         bearerSaveStatus.className = 'status-ok';
@@ -316,14 +332,14 @@
       venueList.querySelectorAll('input[type=checkbox]:checked'),
       function (cb) { return cb.value; }
     );
-    postForm('/passports/submissions/save/', {
+    postForm('/passports/submissions/save/', addConsent({
       bearer_id: bearerIdField.value,
       submission_id: submissionIdField.value,
       venues_stamped: checkedIds,
       date_received: dateReceivedField.value,
       notes: notesField.value,
       exit: exit ? 'true' : 'false',
-    }).then(function (result) {
+    })).then(function (result) {
       if (result.data.ok) {
         submissionIdField.value = result.data.submission_id;
         intakeReadout.textContent = 'Intake #' + result.data.intake_number + ' (' + result.data.season + ')';

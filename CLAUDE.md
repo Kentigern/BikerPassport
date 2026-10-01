@@ -65,7 +65,14 @@ Browser tests with pytest-playwright against `live_server`.
   without permission, so there is **no consent-request email campaign** (Steve, 29 Sep 2026).
   Consent can only be recorded when the bearer gives it: in person at intake, or (future) a
   tick box printed on the paper passport. A bearer never asked stays `pending` and falls under
-  the post-season retention purge. Intake consent checkbox: awaiting the principal's decision.
+  the post-season retention purge.
+- **Intake consent (1 Oct 2026, on Railway, not yet Krystal):** the capture form's bearer section asks two separate
+  questions, each Not set (default) / Yes / No, with the answer date stamped: **keep contact
+  details** after the season (`retention_consent_status`, was `next_season_…`, migration `0025`)
+  and **use them for marketing** (`marketing_consent_status`). Saved by Save bearer *and* by
+  Save / Save & Exit. Planned next (not built): before any use, an email to those who said Yes
+  explaining what MARK will do with the data, with a no-login link to withdraw (`consent_token`).
+  The parked bulk email now needs both consents granted; its unsubscribe withdraws marketing.
 - Physical anti-duplicate safeguard: every processed passport's **corner is snipped**
   before it's returned (nothing in the data model tracks this).
 - Three intake channels, same data model: left at a venue (volunteer collects),
@@ -87,15 +94,22 @@ Browser tests with pytest-playwright against `live_server`.
 - **Krystal (production)** — shared cPanel hosting, Passenger + MySQL, same account as
   MARK's WordPress site; Python 3.12 there. SSH/cPanel Terminal venv:
   `source /home/cfdfcfde/virtualenv/bikerpassport/3.12/bin/activate && cd /home/cfdfcfde/bikerpassport`.
-  Staging app at **staging.bikeandbrew.org** (folder `~/bikerpassport`,
-  `.env` in the app folder). Production will be **bikeandbrew.org** after the cutover in
-  [docs/krystal_migration.md](docs/krystal_migration.md). Krystal requires the footer
+  The live app is at **staging.bikeandbrew.org** (folder `~/bikerpassport`, `.env` in the app
+  folder). **Domain layout decided 29 Sep** ([docs/krystal_migration.md](docs/krystal_migration.md)):
+  Amethyst plan = one domain; the main domain (today Krystal's k-hosting placeholder) becomes
+  **makeyourmark.co.uk** (public WordPress), the app moves to a **subdomain of it**, and
+  **bikeandbrew.org** stays an alias redirecting to the app. On hold with the WordPress handover. Krystal requires the footer
   credit "Hosting kindly provided by Krystal" (linked) — contractual, don't remove it.
 - **Email**: Resend. The verified domain is the **subdomain `passports.makeyourmark.co.uk`**,
   so the sender must be `…@passports.makeyourmark.co.uk` (default
   `noreply@passports.makeyourmark.co.uk`). The bare `makeyourmark.co.uk` is NOT verified.
 
-## Current status (24 Sep 2026, late evening — on Steve's personal PC)
+## Current status (1 Oct 2026 — on Steve's personal PC)
+
+**Pushed to Railway 1 Oct, not yet on Krystal** (92 tests pass): venue report gets a "2nd stamp"
+box and says "1 stamp"/"2 stamps" (migration `0024`); intake consent questions (`0025`, see
+Business rules); MariaDB fixes (see Gotchas). Krystal release: `git pull`, `migrate`,
+`collectstatic` (intake.js changed), restart — and check the MariaDB strict mode comes up clean.
 
 **Ambassador venue report (29 Sep):** replaces the public message form (migration `0023`, 78 tests
 pass, checked in a browser). On Railway via the 29 Sep push; **not yet on Krystal** — release there
@@ -132,14 +146,9 @@ the cutover) on hold with the WordPress work. Intake will start at #1 / ticket 0
 - Personal PC has a dev setup: Python 3.11 `.venv`, `pip install -r requirements-dev.txt`,
   `playwright install chromium`; 58 tests pass.
 
-**Found today:** `bikeandbrew.org` is a **parked domain (alias)** of the account's main
-domain — not the primary domain as earlier notes said. Aliases have no document-root
-setting (that's why cPanel showed no options), so it can't simply be "repointed". The
-fix needs no Krystal ticket: on cutover day remove the alias and re-add it as a normal
-domain with its own folder `bikerpassport` (full steps in
-[docs/krystal_migration.md](docs/krystal_migration.md) Phase 3, step 6).
-**Decision:** do both — run Day 1 intake on **staging.bikeandbrew.org** if needed (its
-database is the production database), and switch the domain whenever convenient.
+**Domains:** `bikeandbrew.org` is an alias of the account's main domain. The 24 Sep plan to make it
+a full domain is superseded by the 29 Sep layout (see Hosting above); intake runs on
+staging.bikeandbrew.org meanwhile, and the switch needs no data migration.
 
 Done and on Railway: ticket numbers, draw from issued numbers, email retry, notes
 alerts, public message page (off), yellow/black wheel, 10s Resend timeout.
@@ -158,9 +167,9 @@ RaffleWinner (removed by `reset_intake_data` if Railway becomes the fallback).
 Day 1 MVP — remaining (Day 1 may be brought forward at short notice):
 1. Real-passport smoke test on Krystal (then decide whether to keep or clean it up).
 2. Later, raise HSTS (`DJANGO_SECURE_HSTS_SECONDS`) once HTTPS has been solid for a while.
-3. Cutover bikeandbrew.org (runbook Phase 3, revised for the parked-domain finding) — **on hold**:
-   it takes bikeandbrew.org off WordPress, whose handover to Steve is paused. Ignore
-   WordPress until he says otherwise. Day 1 intake runs on staging.bikeandbrew.org.
+3. Domain switchover (runbook Phase 3: main domain → makeyourmark.co.uk, app → its subdomain,
+   bikeandbrew.org redirects) — **on hold** with the WordPress handover. Ask Krystal first whether
+   aliases/subdomains count toward the one-domain limit and how to rename the main domain.
 
 Waiting on Steve: recipient lists for `DJANGO_NOTES_ALERT_EMAILS` / `DJANGO_PUBLIC_MESSAGE_ALERT_EMAILS`;
 the boss's wishes for the confirmation email design (it's a hand-coded HTML template —
@@ -194,6 +203,10 @@ must never run once real tickets are emailed.)
   LiteSpeed works with `SECURE_PROXY_SSL_HEADER` (http→https 301, HSTS, secure cookies, CSRF OK).
 - Windows **PowerShell `>` writes UTF-16** — use cmd or Git Bash for `dumpdata > file`.
 - `bikeandbrew.org` is a cPanel **alias (parked domain)**: no document-root setting; check domain types with `uapi DomainInfo list_domains` in cPanel Terminal. Removing an alias can drop its DNS zone — export records first.
+- Krystal's database is **MariaDB**: it can't enforce conditional unique constraints, so "one
+  current season" is enforced in `Season.save()` (W036 silenced); the app turns on strict mode
+  for MySQL connections (was W002). On Railway from 1 Oct, not yet on Krystal; strict mode not yet
+  tried on real MariaDB, so watch the first `migrate`/restart after release there.
 - Krystal MySQL needs `?ssl_disabled=true` on `DATABASE_URL` (PyMySQL SSL handshake fails otherwise).
 - WhiteNoise manifest storage: a missing `collectstatic` makes every page 500.
 - `dumpdata` returns nothing inside the pytest harness — tests serialize directly instead.

@@ -116,7 +116,7 @@ class TestPublicMessage:
         assert sent[0]['to'] == ['ops@example.com']
         assert sent[0]['subject'] == 'Ambassador report: venue 5 The Old Mill'
         body = sent[0]['text_body']
-        for expected in ('Pat Jones (no. 17)', 'The Old Mill (no. 5)', 'Unused passports (12), Stamp', 'see Sam!'):
+        for expected in ('Pat Jones (no. 17)', 'The Old Mill (no. 5)', 'Unused passports (12), 1 stamp', 'see Sam!'):
             assert expected in body, expected
         assert client.get(resp['Location']).status_code == 200
 
@@ -138,6 +138,16 @@ class TestPublicMessage:
         report = PublicMessage.objects.get()
         assert report.collected_summary() == 'Nothing' and report.message == ''
         assert '(none)' in sent[0]['text_body']
+
+    @pytest.mark.parametrize('stamp, second_stamp, expected', [
+        ('on', 'on', 'Unused passports (12), 2 stamps'),
+        (None, 'on', 'Unused passports (12), 1 stamp'),
+        (None, None, 'Unused passports (12)'),
+    ])
+    def test_collected_says_how_many_stamps(self, client, sent, stamp, second_stamp, expected):
+        self._post(client, stamp=stamp, second_stamp=second_stamp)
+        assert PublicMessage.objects.get().collected_summary() == expected
+        assert expected in sent[0]['text_body']
 
     @pytest.mark.parametrize('field,value', [
         ('ambassador_number', '17a'),
@@ -220,4 +230,4 @@ class TestPublicMessage:
         client.force_login(admin)
         page = client.get('/admin/passports/publicmessage/')
         assert page.status_code == 200
-        assert b'The Old Mill' in page.content and b'Unused passports (12), Stamp' in page.content
+        assert b'The Old Mill' in page.content and b'Unused passports (12), 1 stamp' in page.content

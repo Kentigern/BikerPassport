@@ -2,11 +2,12 @@ import uuid
 
 from django.conf import settings
 from django.db import models, transaction
+from django.utils import timezone
 from simple_history.models import HistoricalRecords
 
 
 class ConsentStatus(models.TextChoices):
-    PENDING = 'pending', 'Pending'
+    PENDING = 'pending', 'Not set'
     GRANTED = 'granted', 'Granted'
     DECLINED = 'declined', 'Declined'
 
@@ -71,6 +72,16 @@ class Season(models.Model):
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        # Only one season may be current. The conditional unique constraint
+        # enforces that on Postgres/SQLite, but MariaDB (Krystal) can't
+        # create it (models.W036) — so marking a season current here always
+        # un-marks the others, on every database.
+        with transaction.atomic():
+            if self.is_current:
+                Season.objects.filter(is_current=True).exclude(pk=self.pk).update(is_current=False)
+            super().save(*args, **kwargs)
 
 
 class Venue(models.Model):
@@ -149,30 +160,34 @@ class Bearer(models.Model):
         },
     )
 
-    # Consent/retention state (§5.6). Purpose-specific from the start per §11.2 —
-    # "keep me updated for next year" and "contact me about other MYM things" are
-    # asked, recorded, and can be withdrawn separately.
+    # Consent (§5.6), asked by the volunteer when the passport is entered and
+    # recorded separately for each of two purposes: keeping the contact
+    # details after the season, and using them for marketing. MARK may not
+    # email bearers to ask for consent, so "not set" means never asked.
+    # consent_token is for the bearer's no-login withdraw link.
     consent_token = models.UUIDField(
         default=uuid.uuid4,
         unique=True,
         editable=False,
-        help_text="Token for the no-login consent link emailed to the bearer.",
+        help_text="Token for the bearer's no-login link to withdraw consent.",
     )
     consent_requested_at = models.DateTimeField(null=True, blank=True)
 
-    next_season_consent_status = models.CharField(
+    retention_consent_status = models.CharField(
+        'keep contact details',
         max_length=10,
         choices=ConsentStatus.choices,
         default=ConsentStatus.PENDING,
-        help_text="Consent to be contacted about next year's Bike + Brew.",
+        help_text="Permission for Make Your Mark to keep their contact details after this season.",
     )
-    next_season_consent_responded_at = models.DateTimeField(null=True, blank=True)
+    retention_consent_responded_at = models.DateTimeField(null=True, blank=True)
 
     marketing_consent_status = models.CharField(
+        'use for marketing',
         max_length=10,
         choices=ConsentStatus.choices,
         default=ConsentStatus.PENDING,
-        help_text="Consent to be contacted about other Make Your Mark events/merchandise.",
+        help_text="Permission to use their contact details for marketing (e.g. events, merchandise).",
     )
     marketing_consent_responded_at = models.DateTimeField(null=True, blank=True)
 
@@ -187,6 +202,19 @@ class Bearer(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     history = HistoricalRecords()
+
+    CONSENT_FIELDS = ['retention_consent_status', 'marketing_consent_status']
+
+    def set_consent(self, field, status):
+        """Set one consent status, stamping when it was answered (cleared
+        if set back to not set). Returns the changed field names (empty if
+        unchanged), for save(update_fields=...)."""
+        if getattr(self, field) == status:
+            return []
+        responded_field = field.replace('_status', '_responded_at')
+        setattr(self, field, status)
+        setattr(self, responded_field, None if status == ConsentStatus.PENDING else timezone.now())
+        return [field, responded_field]
 
     def __str__(self):
         return f"{self.name} <{self.email}>"
@@ -520,6 +548,7 @@ class PublicMessage(models.Model):
     unused_passports = models.BooleanField('unused passports', default=False)
     passports_collected = models.PositiveIntegerField('number collected', null=True, blank=True)
     stamp = models.BooleanField(default=False)
+    second_stamp = models.BooleanField('2nd stamp', default=False)
     inkpad = models.BooleanField(default=False)
     folder = models.BooleanField(default=False)
     unused_stationery = models.BooleanField('unused stationery', default=False)
@@ -536,7 +565,6 @@ class PublicMessage(models.Model):
 
     COLLECTED_ITEMS = [
         ('unused_passports', 'Unused passports'),
-        ('stamp', 'Stamp'),
         ('inkpad', 'Inkpad'),
         ('folder', 'Folder'),
         ('unused_stationery', 'Unused stationery'),
@@ -546,11 +574,16 @@ class PublicMessage(models.Model):
         return f"{self.name or 'Anonymous'} — {self.created_at:%Y-%m-%d %H:%M}"
 
     def collected_summary(self):
-        """e.g. "Unused passports (12), Stamp, Folder" — or "Nothing"."""
+        """e.g. "Unused passports (12), 2 stamps, Folder" — or "Nothing"."""
         items = []
         for field, label in self.COLLECTED_ITEMS:
             if getattr(self, field):
                 if field == 'unused_passports' and self.passports_collected is not None:
                     label = f'{label} ({self.passports_collected})'
                 items.append(label)
+            if field == 'unused_passports':
+                # The two stamp boxes are reported as a count, so it's explicit.
+                stamps = self.stamp + self.second_stamp
+                if stamps:
+                    items.append(f'{stamps} stamp{"s" if stamps > 1 else ""}')
         return ', '.join(items) or 'Nothing'

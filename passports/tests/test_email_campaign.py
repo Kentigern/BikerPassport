@@ -11,6 +11,7 @@ def make_bearer(**kwargs):
         'phone': f"+4479005{Bearer.objects.count():06d}",
         'mailing_address': '1 Test Street',
         'email': 'bearer@example.com',
+        'retention_consent_status': 'granted',
     }
     defaults.update(kwargs)
     return Bearer.objects.create(**defaults)
@@ -19,27 +20,22 @@ def make_bearer(**kwargs):
 @pytest.mark.django_db
 class TestQualifyingBearers:
     def test_only_granted_consent_is_included(self):
-        granted = make_bearer(next_season_consent_status='granted')
-        make_bearer(next_season_consent_status='pending')
-        make_bearer(next_season_consent_status='declined')
+        granted = make_bearer(marketing_consent_status='granted')
+        make_bearer(marketing_consent_status='pending')
+        make_bearer(marketing_consent_status='declined')
 
-        result = list(qualifying_bearers(EmailCampaign.Purpose.NEXT_SEASON))
+        for purpose in EmailCampaign.Purpose.values:
+            assert list(qualifying_bearers(purpose)) == [granted]
 
-        assert result == [granted]
+    def test_needs_both_keep_and_marketing_consent(self):
+        both = make_bearer(marketing_consent_status='granted')
+        make_bearer(marketing_consent_status='granted', retention_consent_status='pending')
+        make_bearer(marketing_consent_status='granted', retention_consent_status='declined')
 
-    def test_purposes_are_independent(self):
-        next_season_only = make_bearer(
-            next_season_consent_status='granted', marketing_consent_status='pending'
-        )
-        marketing_only = make_bearer(
-            next_season_consent_status='declined', marketing_consent_status='granted'
-        )
-
-        assert list(qualifying_bearers(EmailCampaign.Purpose.NEXT_SEASON)) == [next_season_only]
-        assert list(qualifying_bearers(EmailCampaign.Purpose.MARKETING)) == [marketing_only]
+        assert list(qualifying_bearers(EmailCampaign.Purpose.MARKETING)) == [both]
 
     def test_blank_email_excluded_even_if_granted(self):
-        make_bearer(next_season_consent_status='granted', email='')
+        make_bearer(marketing_consent_status='granted', email='')
 
         assert list(qualifying_bearers(EmailCampaign.Purpose.NEXT_SEASON)) == []
 
@@ -47,9 +43,9 @@ class TestQualifyingBearers:
 @pytest.mark.django_db
 class TestSendCampaign:
     def test_sends_to_every_qualifying_bearer_and_updates_counters(self):
-        b1 = make_bearer(next_season_consent_status='granted', email='one@example.com')
-        b2 = make_bearer(next_season_consent_status='granted', email='two@example.com')
-        make_bearer(next_season_consent_status='pending')  # excluded
+        b1 = make_bearer(marketing_consent_status='granted', email='one@example.com')
+        b2 = make_bearer(marketing_consent_status='granted', email='two@example.com')
+        make_bearer(marketing_consent_status='pending')  # excluded
 
         campaign = EmailCampaign.objects.create(
             subject='Hello', body_html='<p>Hi there</p>', purpose=EmailCampaign.Purpose.NEXT_SEASON
@@ -71,8 +67,8 @@ class TestSendCampaign:
         ) == {EmailCampaignRecipient.Status.SENT}
 
     def test_resuming_skips_already_sent_recipients(self):
-        make_bearer(next_season_consent_status='granted', email='one@example.com')
-        b2 = make_bearer(next_season_consent_status='granted', email='two@example.com')
+        make_bearer(marketing_consent_status='granted', email='one@example.com')
+        b2 = make_bearer(marketing_consent_status='granted', email='two@example.com')
 
         campaign = EmailCampaign.objects.create(
             subject='Hello', body_html='<p>Hi</p>', purpose=EmailCampaign.Purpose.NEXT_SEASON
@@ -88,8 +84,8 @@ class TestSendCampaign:
         assert mail.outbox[0].to == [b2.email]
 
     def test_a_send_failure_is_recorded_and_does_not_block_others(self, monkeypatch):
-        make_bearer(next_season_consent_status='granted', email='one@example.com')
-        make_bearer(next_season_consent_status='granted', email='two@example.com')
+        make_bearer(marketing_consent_status='granted', email='one@example.com')
+        make_bearer(marketing_consent_status='granted', email='two@example.com')
 
         campaign = EmailCampaign.objects.create(
             subject='Hello', body_html='<p>Hi</p>', purpose=EmailCampaign.Purpose.NEXT_SEASON
@@ -119,17 +115,17 @@ class TestSendCampaign:
 
 @pytest.mark.django_db
 class TestUnsubscribeView:
-    def test_unsubscribe_flips_matching_consent_only(self, client):
-        bearer = make_bearer(next_season_consent_status='granted', marketing_consent_status='granted')
+    def test_unsubscribe_withdraws_marketing_consent_only(self, client):
+        bearer = make_bearer(marketing_consent_status='granted')
 
         url = f'/passports/email/unsubscribe/{bearer.consent_token}/next_season/'
         response = client.get(url)
 
         bearer.refresh_from_db()
         assert response.status_code == 200
-        assert bearer.next_season_consent_status == 'declined'
-        assert bearer.next_season_consent_responded_at is not None
-        assert bearer.marketing_consent_status == 'granted'  # untouched
+        assert bearer.marketing_consent_status == 'declined'
+        assert bearer.marketing_consent_responded_at is not None
+        assert bearer.retention_consent_status == 'granted'  # untouched
 
     def test_unknown_token_is_404_not_500(self, client):
         response = client.get('/passports/email/unsubscribe/00000000-0000-0000-0000-000000000000/marketing/')

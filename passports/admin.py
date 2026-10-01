@@ -92,7 +92,7 @@ class BearerAdmin(SimpleHistoryAdmin):
         'name',
         'email',
         'phone',
-        'next_season_consent_status',
+        'retention_consent_status',
         'marketing_consent_status',
         'retention_expiry_date',
     ]
@@ -102,7 +102,7 @@ class BearerAdmin(SimpleHistoryAdmin):
         "bearer's phone number and unlocks editing them (privacy control, "
         "§5.2) — everything else here is freely browsable."
     )
-    list_filter = ['next_season_consent_status', 'marketing_consent_status']
+    list_filter = ['retention_consent_status', 'marketing_consent_status']
     readonly_fields = ['consent_token']
 
     def get_list_display(self, request):
@@ -245,7 +245,7 @@ class PublicMessageAdmin(admin.ModelAdmin):
     search_fields = ['name', 'venue_name', 'reply_to', 'message']
     fields = [
         'created_at', 'report_date', 'name', 'ambassador_number', 'venue_name', 'venue_number',
-        'unused_passports', 'passports_collected', 'stamp', 'inkpad', 'folder', 'unused_stationery',
+        'unused_passports', 'passports_collected', 'stamp', 'second_stamp', 'inkpad', 'folder', 'unused_stationery',
         'message', 'reply_to', 'alert_sent', 'handled',
     ]
     readonly_fields = [f for f in fields if f != 'handled']

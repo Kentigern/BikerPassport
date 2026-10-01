@@ -1,33 +1,38 @@
 # Krystal migration runbook
 
-Deploying the Django app to Krystal (production) alongside MARK's existing
-WordPress site, moving **bikeandbrew.org** to Django and giving WordPress
-**steve-newman.com** as a temporary domain. Agreed 2026-09-20; progress notes at
-the end. See [CLAUDE.md](../CLAUDE.md) for the current Day 1 status.
+Deploying the Django Passport app to Krystal alongside MARK's WordPress site, and
+settling the account's domains. See [CLAUDE.md](../CLAUDE.md) for current status.
 
-**Status (2026-09-23):** Phase 0 and Phase 1 done (staging live at
-staging.bikeandbrew.org). Phase 2 next, narrowed to reference data only — see
-[scripts/transfer_reference_data.txt](../scripts/transfer_reference_data.txt).
-Phases 3–4 not started.
+**Status (29 Sep 2026):** Phases 0–2 done. The app is **live on Krystal** at
+staging.bikeandbrew.org (its database is the production database). Phase 3, the domain
+layout below, is **on hold with the WordPress handover** and needs no data migration.
 
-**Finding (2026-09-24) — read before Phase 3:** `bikeandbrew.org` is a **parked domain
-(alias)** of the account's main domain, *not* the primary domain as noted on
-2026-09-20. An alias always serves the main domain's `public_html` and cPanel offers
-no document-root setting for it — that's why "repoint the document root" (Phase 0
-item 1, Phase 3 step 6) can't be done as written. Revised approach, all doable in
-cPanel without Krystal support: record its DNS zone, remove the alias, re-add
-`bikeandbrew.org` as a normal domain with "Share document root" unticked and folder
-`bikerpassport` (the folder staging already serves, which holds the Passenger
-`.htaccess`). Phase 3 below is updated accordingly. Also: Day 1 intake may run on
-staging.bikeandbrew.org first — its database *is* the production database, so the
-domain switch later needs no data migration (Phase 3 step 7 no longer applies).
+## Domain layout (decided 29 Sep 2026)
 
+Krystal's Amethyst plan allows **one domain**. Today that slot holds Krystal's placeholder
+(`3cfd762f3c16f59d5ea876245a8e5714-17604.sites.k-hosting.co.uk`), and bikeandbrew.org is an
+**alias** of it. Target:
 
-Detailed runbook, agreed with the user on 2026-09-20, for the three-part migration: deploy Django to Krystal, give Django the bikeandbrew.org domain, and give WordPress steve-newman.com as a temporary replacement domain. 
+| Address | Role | Counts toward the one domain? |
+|---|---|---|
+| **makeyourmark.co.uk** | The account's main domain: the public WordPress site. The charity's public face stays here. | Yes: the one domain |
+| **Passport app subdomain** of makeyourmark.co.uk (name to choose, e.g. `passport.` or `passports.`) | The Passport app, folder `~/bikerpassport` | No (subdomain) |
+| **bikeandbrew.org** | Alias that **redirects** to the app subdomain, so trustees', ambassadors' and volunteers' links keep working | No (alias) |
+| staging.bikeandbrew.org | Today's app address; redirect to the app subdomain afterwards | No (subdomain) |
+| makeyourmark.co.uk/bike-and-brew (optional) | Public page for the fundraising programme, on WordPress | n/a |
 
-**Hard constraint driving the sequencing:** makeyourmark.co.uk (WordPress's eventual real domain) is still on GoDaddy, not pointed at Krystal — bikeandbrew.org is WordPress's *only* live public domain right now. So bikeandbrew.org can't be handed to Django until steve-newman.com is already live serving WordPress, or the public WordPress site goes dark in between. The three user-stated steps have to become one coordinated cutover for the domain-swap parts, not three independent sequential actions.
+Railway keeps www.steve-newman.com as the test site; it is no longer part of this plan.
 
-**Hard constraint on WordPress:** the user explicitly does not want WordPress's files moved/relocated, ever. The resolved approach is a config-only split: Django gets a brand-new folder; bikeandbrew.org's *document-root mapping* is repointed to that new folder (cPanel lets you edit which folder a domain — including the Primary Domain — points to, independent of what's already there); steve-newman.com is added as a second Addon Domain whose document root is set to WordPress's *existing, untouched* `public_html`. Multiple domains sharing one document root is a standard cPanel pattern (classic "Parked Domain" behavior). WordPress's own canonical URL (Settings > General / wp_options) still needs updating to steve-newman.com — a settings edit, not a file move — and again later to makeyourmark.co.uk when that's ready, with no further file moves either time.
+Why: makeyourmark.co.uk is the domain the charity markets, so it should hold the slot; the
+app is an internal tool used by trustees, ambassadors and volunteers, and sits under the
+charity's name as a subdomain. Emails already send from `@passports.makeyourmark.co.uk`.
+
+**Confirm with Krystal before Phase 3:** (1) that aliases and subdomains don't count toward
+the Amethyst one-domain limit; (2) whether renaming the main domain is a cPanel, client-area
+or support job.
+
+**Hard constraint on WordPress:** Steve does not want WordPress's files moved, ever. Nothing
+below moves them: WordPress stays in `public_html`, served by the main domain.
 
 ### Phase 0 — Discovery (no live impact)
 1. ~~Confirm cPanel > Domains lets you edit the Primary Domain's document root~~ — **checked 2026-09-24:** bikeandbrew.org is a parked domain (alias), which has no document-root setting; see the finding at the top and the revised Phase 3.
@@ -55,32 +60,57 @@ Cross-engine, so goes through Django's ORM, not a raw SQL dump:
 5. Re-run `backfill_submission_locks` (dry run) on Krystal — should report zero unlocked, confirming the data (already backfilled on Railway) came across intact.
 This is a rehearsal now; repeat with a fresh dump right before the real cutover so the final dataset isn't stale.
 
-### Phase 3 — The coordinated cutover
-1. A day ahead: lower DNS TTLs for steve-newman.com/www at GoDaddy.
-2. In cPanel, create Django's new app folder (WordPress's `public_html` untouched).
-3. Add steve-newman.com as an **alias (parked domain) of the main domain**, so it serves the existing `public_html` (WordPress) untouched.
-4. Update WordPress's Site Address/Home URL to steve-newman.com (wp-admin > Settings > General, or WP-CLI `search-replace` for hardcoded links).
-5. At GoDaddy, repoint `www.steve-newman.com`/apex forwarding from Railway to Krystal's addon-domain target; wait for propagation; confirm WordPress loads at steve-newman.com.
-6. Move bikeandbrew.org to Django (it's currently an alias, so it has no document-root setting of its own):
-   a. cPanel → Zone Editor → bikeandbrew.org → record/export **every** DNS record (MX/email especially) — removing an alias can drop its zone.
-   b. cPanel → Domains: remove the `bikeandbrew.org` alias.
-   c. Create a New Domain `bikeandbrew.org`, **untick "Share document root"**, folder `bikerpassport`.
-   d. Re-add any DNS records lost in (b); add `bikeandbrew.org` to `DJANGO_ALLOWED_HOSTS` / `DJANGO_CSRF_TRUSTED_ORIGINS`, set `DJANGO_PUBLIC_BASE_URL=https://bikeandbrew.org` in `.env`; restart the app.
-   e. Optionally redirect staging.bikeandbrew.org → bikeandbrew.org so volunteers' bookmarks keep working.
-7. ~~Re-run the data migration~~ — not needed if intake has been running on Krystal staging (same app, same database).
-8. cPanel SSL/TLS Status > Run AutoSSL for both domains.
-9. Smoke test both live domains fully.
+### Phase 3 — Domain switchover (ON HOLD — do together with the WordPress handover)
+
+Only makeyourmark.co.uk's DNS move affects the public; the app keeps working at
+staging.bikeandbrew.org throughout, and no data moves.
+
+1. **A day ahead:** at GoDaddy, lower the TTL on makeyourmark.co.uk's DNS records. Export or
+   screenshot the whole zone (MX/email records especially), including the Resend records
+   under `passports.makeyourmark.co.uk` (they must survive the move, or confirmation
+   emails stop).
+2. **Check WordPress's Site URL** (wp-admin → Settings → General). Note it; it must become
+   `https://makeyourmark.co.uk` in step 4.
+3. **Rename the main domain** from the k-hosting placeholder to `makeyourmark.co.uk`
+   (cPanel/client area/Krystal support, per the check above). bikeandbrew.org stays an alias.
+4. **Update WordPress's Site Address and Home URL** to `https://makeyourmark.co.uk`
+   (Settings → General, or WP-CLI `search-replace` for hard-coded links).
+5. **Point makeyourmark.co.uk at Krystal:** either move its nameservers to Krystal (then
+   recreate the step 1 records in cPanel Zone Editor) or keep GoDaddy DNS and change the
+   apex/www records to Krystal's IP. Wait for propagation; confirm WordPress loads at
+   https://makeyourmark.co.uk.
+6. **Create the app subdomain** in cPanel → Domains: `<app>.makeyourmark.co.uk`, **untick
+   "Share document root"**, folder `bikerpassport` (it holds the Passenger `.htaccess`, so the
+   app answers on any domain whose root is that folder; check it does). Add its DNS record if
+   DNS stays at GoDaddy.
+7. **App settings** in `~/bikerpassport/.env`: add the subdomain to `DJANGO_ALLOWED_HOSTS` and
+   `https://<app>.makeyourmark.co.uk` to `DJANGO_CSRF_TRUSTED_ORIGINS`; set
+   `DJANGO_PUBLIC_BASE_URL=https://<app>.makeyourmark.co.uk`. Keep the staging entries until
+   step 9. Restart the app.
+8. **cPanel → SSL/TLS Status → Run AutoSSL**, and confirm certificates for makeyourmark.co.uk
+   and the app subdomain.
+9. **Redirects:** cPanel → Domains → Redirects: `bikeandbrew.org` (and `www.`) and
+   `staging.bikeandbrew.org` → `https://<app>.makeyourmark.co.uk/` (permanent, 301).
+10. **Smoke test:** WordPress at makeyourmark.co.uk; app login and a test intake at the new
+    subdomain (LOADTEST data, then `loadtest_fixtures --cleanup`); old addresses redirect;
+    a confirmation email's links use the new address; the Krystal footer credit shows.
+11. Tell trustees, ambassadors and volunteers the new address (the old ones keep redirecting).
+
+**Rollback:** WordPress never moves, so undo = reverse the DNS change and the domain rename;
+the app stays reachable at staging.bikeandbrew.org until step 9, so keep the redirects last.
 
 ### Phase 4 — Harden & decommission
 - Django is staff-only by app login already, but the domain is still publicly reachable — consider `robots.txt` disallow-all and/or cPanel directory password protection / IP allowlist given real PII is involved.
 - Set real (not staging) env vars for `DJANGO_ALLOWED_HOSTS` etc. on Krystal.
-- Decide Railway's fate once bikeandbrew.org has run cleanly on Krystal for a while — decommission, or keep briefly as a fallback (same pattern as the existing `bikenbrew-demo` fallback project).
+- Railway: decided — it stays the test site (www.steve-newman.com), with a plan-only fallback in [railway_fallback.md](railway_fallback.md).
 - Update SPEC.md / other memory once done — several existing notes (Railway as the live host, bikeandbrew.org on WordPress) will be stale.
 
 ### Rollback
-Phases 0–2 touch nothing live, fully abandonable. Phase 3 is the only risky window — keep Railway's Django deployment running untouched until Phase 3 step 9 passes, and know WordPress's original state (it never physically moves, so revert = undo the domain remaps + GoDaddy DNS) as a rehearsed procedure, not something improvised under pressure.
+Phases 0–2 are done. Phase 3 has its own rollback note above.
 
 
+
+## History
 
 ### Progress as of 2026-09-20 (end of session)
 

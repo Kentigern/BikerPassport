@@ -40,6 +40,7 @@
     .collected legend { font-weight: bold; font-size: .95rem; padding: 0 .4rem; }
     label.check { display: flex; align-items: center; gap: .6rem; font-weight: normal; margin: .75rem 0 0; cursor: pointer; }
     label.check input { width: 1.2rem; height: 1.2rem; margin: 0; accent-color: #efdaa4; }
+    .check-row { display: flex; gap: 2rem; }
     .collected-count { margin-left: 1.8rem; }
     .collected-count label { font-weight: normal; margin-top: .5rem; }
     .collected-count input { max-width: 8rem; }
@@ -107,7 +108,10 @@
           {{ form.passports_collected }}
           {{ form.passports_collected.errors }}
         </div>
-        <label class="check">{{ form.stamp }} {{ form.stamp.label }}</label>
+        <div class="check-row">
+          <label class="check">{{ form.stamp }} {{ form.stamp.label }}</label>
+          <label class="check">{{ form.second_stamp }} {{ form.second_stamp.label }}</label>
+        </div>
         <label class="check">{{ form.inkpad }} {{ form.inkpad.label }}</label>
         <label class="check">{{ form.folder }} {{ form.folder.label }}</label>
         <label class="check">{{ form.unused_stationery }} {{ form.unused_stationery.label }}</label>
