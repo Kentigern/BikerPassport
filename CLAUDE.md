@@ -113,7 +113,7 @@ Browser tests with pytest-playwright against `live_server`.
 `Season` (migrations `0026`/`0027`, which also backfill old reports and grant Site Admin access).
 New model `VenueSeason` = a venue's part in one season; admin list **Venues by season** shows each
 active venue's kit recovery status (Outstanding / Collected / Kept at venue for next year / Lost,
-editable from the list), report count (links to its reports) and latest report's kit; filters
+editable from the list), report count (links to its reports) last report (date, ambassador) and its kit as one column per item (passports count, stamp, 2nd stamp, inkpad, folder, stationery — blank if no report); filters
 by season, status, "no report yet". Rows for the current season are created when the list is
 opened. Deliberately the home for MARK's hoped-for venue management (recruitment stage, that
 year's passport number, ambassador, contact details — `Venue` already has contact fields).

@@ -1,4 +1,5 @@
 from django.contrib import admin, messages
+from django.contrib.admin.templatetags.admin_list import _boolean_icon
 from django.contrib.admin.views.main import ChangeList
 from django.db.models import Count, F, OuterRef, Q, Subquery
 from django.shortcuts import redirect
@@ -297,7 +298,10 @@ class VenueSeasonAdmin(SimpleHistoryAdmin):
     for the current season's active venues appear automatically; the
     status is set by staff, guided by the ambassadors' venue reports."""
 
-    list_display = ['venue_number', 'venue_name', 'season', 'recovery_status', 'reports', 'latest_report_summary']
+    list_display = [
+        'venue_number', 'venue_name', 'season', 'recovery_status', 'reports', 'last_report',
+        'kit_passports', 'kit_stamp', 'kit_second_stamp', 'kit_inkpad', 'kit_folder', 'kit_stationery',
+    ]
     list_display_links = ['venue_number', 'venue_name']
     list_editable = ['recovery_status']
     list_filter = ['season', 'recovery_status', ReportedFilter]
@@ -347,12 +351,35 @@ class VenueSeasonAdmin(SimpleHistoryAdmin):
             url, obj.venue_id, obj.season_id, obj.report_count,
         )
 
-    @admin.display(description='Latest report')
-    def latest_report_summary(self, obj):
+    @admin.display(description='Last report')
+    def last_report(self, obj):
+        report = getattr(obj, 'latest_report', None)
+        return f'{report.report_date:%d %b} ({report.name})' if report else '—'
+
+    # The last report's kit, one column per item: blank with no report, so
+    # "not reported" never looks like "reported as not collected".
+    @admin.display(description='Passports')
+    def kit_passports(self, obj):
         report = getattr(obj, 'latest_report', None)
         if report is None:
-            return '—'
-        return f'{report.report_date:%d %b} ({report.name}): {report.collected_summary()}'
+            return ''
+        if report.passports_collected is not None:
+            return report.passports_collected
+        return _boolean_icon(report.unused_passports)
+
+    def _kit(field, label):
+        @admin.display(description=label)
+        def column(self, obj):
+            report = getattr(obj, 'latest_report', None)
+            return _boolean_icon(getattr(report, field)) if report else ''
+        return column
+
+    kit_stamp = _kit('stamp', 'Stamp')
+    kit_second_stamp = _kit('second_stamp', '2nd stamp')
+    kit_inkpad = _kit('inkpad', 'Inkpad')
+    kit_folder = _kit('folder', 'Folder')
+    kit_stationery = _kit('unused_stationery', 'Stationery')
+    del _kit
 
     def has_add_permission(self, request):
         return False

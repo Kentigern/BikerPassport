@@ -1,6 +1,7 @@
 """Venue reports linked to their venue and season, and the "Venues by
 season" admin list built on them (kit recovery)."""
 import importlib
+import re
 
 import pytest
 from django.apps import apps
@@ -60,7 +61,19 @@ def test_list_shows_report_count_and_latest_kit(admin_client, season, venues):
     make_report(venue, Season.objects.create(name='2025'))  # another season's: not counted
     page = admin_client.get(LIST_URL).content.decode()
     assert f'?venue__id__exact={venue.pk}&season__id__exact={season.pk}">2</a>' in page
-    assert 'Unused passports (12), 2 stamps' in page
+    row = page[page.index(f'>Venue {venue.number}<'):]
+    row = row[:row.index('</tr>')]
+    assert f'{timezone.localdate():%d %b} (Pat Jones)' in row
+    assert '>12</td>' in row  # passports collected
+    # stamp, 2nd stamp, inkpad, folder, stationery
+    assert re.findall(r'icon-(yes|no)', row) == ['yes', 'yes', 'no', 'no', 'no']
+
+
+def test_kit_columns_are_blank_without_a_report(admin_client, season, venues):
+    page = admin_client.get(LIST_URL).content.decode()
+    row = page[page.index('>Venue 1<'):]
+    row = row[:row.index('</tr>')]
+    assert 'icon-yes' not in row and 'icon-no' not in row
 
 
 def test_reported_filter(admin_client, season, venues):
