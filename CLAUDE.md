@@ -111,6 +111,17 @@ box and says "1 stamp"/"2 stamps" (migration `0024`); intake consent questions (
 Business rules); MariaDB fixes (see Gotchas). Krystal release: `git pull`, `migrate`,
 `collectstatic` (intake.js changed), restart — and check the MariaDB strict mode comes up clean.
 
+**Venue kit recovery (1 Oct, on Railway, not yet Krystal):** venue reports now link to their `Venue` and
+`Season` (migrations `0026`/`0027`, which also backfill old reports and grant Site Admin access).
+New model `VenueSeason` = a venue's part in one season; admin list **Venues by season** shows each
+active venue's kit recovery status (Outstanding / Collected / Kept at venue for next year / Lost,
+editable from the list), report count (links to its reports) and latest report's kit; filters
+by season, status, "no report yet". Rows for the current season are created when the list is
+opened. Deliberately the home for MARK's hoped-for venue management (recruitment stage, that
+year's passport number, ambassador, contact details — `Venue` already has contact fields).
+Steve's Gemini draft of a full venue management system (serialised assets, depot, routes) was
+reviewed and judged too heavy; this lean version was agreed instead (draft not kept in the repo).
+
 **Krystal releases** use [scripts/deploy_krystal.sh](scripts/deploy_krystal.sh) (pull, `check`, `migrate`,
 `collectstatic`, restart, login-page check; stops at the first failure). In cPanel Terminal/SSH:
 `bash ~/bikerpassport/scripts/deploy_krystal.sh` — the first time, `git pull` first so the script is there.

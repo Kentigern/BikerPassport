@@ -29,6 +29,7 @@ from django.utils import timezone
 
 from .emailing import send_staff_alert
 from .forms import PublicMessageForm
+from .models import Season, Venue
 
 MIN_FILL_SECONDS = 3
 MAX_FORM_AGE = 60 * 60 * 24
@@ -88,6 +89,8 @@ def public_message_view(request):
             else:
                 message = form.save(commit=False)
                 message.report_date = timezone.localdate()  # never from the form
+                message.venue = Venue.objects.get(number=message.venue_number)  # the form checked it exists
+                message.season = Season.objects.current()
                 message.save()
                 admin_path = reverse('admin:passports_publicmessage_change', args=[message.pk])
                 message.alert_sent = send_staff_alert(

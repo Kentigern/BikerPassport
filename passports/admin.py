@@ -1,5 +1,9 @@
 from django.contrib import admin, messages
+from django.contrib.admin.views.main import ChangeList
+from django.db.models import Count, F, OuterRef, Q, Subquery
 from django.shortcuts import redirect
+from django.urls import reverse
+from django.utils.html import format_html
 from simple_history.admin import SimpleHistoryAdmin
 
 from .access import (
@@ -21,6 +25,7 @@ from .models import (
     RaffleWinner,
     Season,
     Venue,
+    VenueSeason,
 )
 from .phone import normalize_uk_phone
 
@@ -241,10 +246,10 @@ class PublicMessageAdmin(admin.ModelAdmin):
         'collected', 'short_message', 'alert_sent', 'handled',
     ]
     list_editable = ['handled']
-    list_filter = ['handled', 'alert_sent', 'report_date']
+    list_filter = ['handled', 'alert_sent', 'season', 'report_date']
     search_fields = ['name', 'venue_name', 'reply_to', 'message']
     fields = [
-        'created_at', 'report_date', 'name', 'ambassador_number', 'venue_name', 'venue_number',
+        'created_at', 'report_date', 'season', 'name', 'ambassador_number', 'venue_name', 'venue_number', 'venue',
         'unused_passports', 'passports_collected', 'stamp', 'second_stamp', 'inkpad', 'folder', 'unused_stationery',
         'message', 'reply_to', 'alert_sent', 'handled',
     ]
@@ -259,6 +264,100 @@ class PublicMessageAdmin(admin.ModelAdmin):
         return obj.message if len(obj.message) <= 80 else obj.message[:77] + '…'
 
     def has_add_permission(self, request):
+        return False
+
+
+class ReportedFilter(admin.SimpleListFilter):
+    title = 'venue report'
+    parameter_name = 'reported'
+
+    def lookups(self, request, model_admin):
+        return [('yes', 'Report received'), ('no', 'No report yet')]
+
+    def queryset(self, request, queryset):
+        if self.value() == 'yes':
+            return queryset.filter(report_count__gt=0)
+        if self.value() == 'no':
+            return queryset.filter(report_count=0)
+        return queryset
+
+
+class VenueSeasonChangeList(ChangeList):
+    def get_results(self, request):
+        # Attach each row's latest report with one query per page, not one per row.
+        super().get_results(request)
+        latest = PublicMessage.objects.in_bulk([row.latest_report_id for row in self.result_list if row.latest_report_id])
+        for row in self.result_list:
+            row.latest_report = latest.get(row.latest_report_id)
+
+
+@admin.register(VenueSeason)
+class VenueSeasonAdmin(SimpleHistoryAdmin):
+    """Each venue's part in a season — for now, recovering its kit. Rows
+    for the current season's active venues appear automatically; the
+    status is set by staff, guided by the ambassadors' venue reports."""
+
+    list_display = ['venue_number', 'venue_name', 'season', 'recovery_status', 'reports', 'latest_report_summary']
+    list_display_links = ['venue_number', 'venue_name']
+    list_editable = ['recovery_status']
+    list_filter = ['season', 'recovery_status', ReportedFilter]
+    search_fields = ['venue__name', '=venue__number']
+    list_per_page = 100
+    fields = ['venue', 'season', 'recovery_status', 'recovery_notes', 'updated_at']
+    readonly_fields = ['venue', 'season', 'updated_at']
+
+    def changelist_view(self, request, extra_context=None):
+        season = Season.objects.current()
+        if season is not None:
+            VenueSeason.ensure_rows(season)
+        return super().changelist_view(request, extra_context)
+
+    def get_changelist(self, request, **kwargs):
+        return VenueSeasonChangeList
+
+    def get_queryset(self, request):
+        reports = PublicMessage.objects.filter(venue=OuterRef('venue'), season=OuterRef('season'))
+        return (
+            super()
+            .get_queryset(request)
+            .select_related('venue', 'season')
+            .annotate(
+                report_count=Count(
+                    'venue__reports', filter=Q(venue__reports__season=F('season')), distinct=True
+                ),
+                latest_report_id=Subquery(reports.order_by('-created_at', '-pk').values('pk')[:1]),
+            )
+        )
+
+    @admin.display(description='No.', ordering='venue__number')
+    def venue_number(self, obj):
+        return obj.venue.number
+
+    @admin.display(description='Venue', ordering='venue__name')
+    def venue_name(self, obj):
+        return obj.venue.name
+
+    @admin.display(description='Reports', ordering='report_count')
+    def reports(self, obj):
+        if not obj.report_count:
+            return '—'
+        url = reverse('admin:passports_publicmessage_changelist')
+        return format_html(
+            '<a href="{}?venue__id__exact={}&season__id__exact={}">{}</a>',
+            url, obj.venue_id, obj.season_id, obj.report_count,
+        )
+
+    @admin.display(description='Latest report')
+    def latest_report_summary(self, obj):
+        report = getattr(obj, 'latest_report', None)
+        if report is None:
+            return '—'
+        return f'{report.report_date:%d %b} ({report.name}): {report.collected_summary()}'
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
         return False
 
 

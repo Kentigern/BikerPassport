@@ -134,6 +134,48 @@ class Venue(models.Model):
         return f"{self.number}. {self.name}"
 
 
+class VenueSeason(models.Model):
+    """A venue's part in one season. For now it tracks recovering the
+    season's kit (fed by ambassadors' venue reports); it's also where
+    later per-season venue work belongs — recruitment stage, that year's
+    passport number, the ambassador looking after it. Rows for the current
+    season's active venues are created when the admin list is opened."""
+
+    class RecoveryStatus(models.TextChoices):
+        OUTSTANDING = 'outstanding', 'Outstanding'
+        COLLECTED = 'collected', 'Collected'
+        KEPT = 'kept', 'Kept at venue for next year'
+        LOST = 'lost', 'Lost'
+
+    venue = models.ForeignKey(Venue, on_delete=models.PROTECT, related_name='seasons')
+    season = models.ForeignKey(Season, on_delete=models.PROTECT, related_name='venues')
+    recovery_status = models.CharField(
+        'kit recovery', max_length=12, choices=RecoveryStatus.choices, default=RecoveryStatus.OUTSTANDING
+    )
+    recovery_notes = models.TextField(blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    history = HistoricalRecords()
+
+    class Meta:
+        verbose_name = 'venue by season'
+        verbose_name_plural = 'venues by season'
+        ordering = ['-season__name', 'venue__number']
+        constraints = [
+            models.UniqueConstraint(fields=['venue', 'season'], name='one_row_per_venue_per_season'),
+        ]
+
+    def __str__(self):
+        return f"{self.venue} ({self.season})"
+
+    @classmethod
+    def ensure_rows(cls, season):
+        """Add any missing rows for the season's active venues."""
+        existing = cls.objects.filter(season=season).values_list('venue_id', flat=True)
+        missing = Venue.objects.filter(is_active=True).exclude(pk__in=existing)
+        cls.objects.bulk_create([cls(venue=venue, season=season) for venue in missing], ignore_conflicts=True)
+
+
 class Bearer(models.Model):
     """A passport holder's personal details (§4). A fresh record per submission
     unless staff explicitly match to an existing bearer."""
@@ -545,6 +587,10 @@ class PublicMessage(models.Model):
     )
     venue_name = models.CharField(max_length=200, blank=True)
     venue_number = models.PositiveIntegerField(null=True, blank=True)
+    # Set from venue_number when the report arrives (the form checks it's a
+    # real venue), with the season current then — empty on general messages.
+    venue = models.ForeignKey(Venue, null=True, blank=True, on_delete=models.PROTECT, related_name='reports')
+    season = models.ForeignKey(Season, null=True, blank=True, on_delete=models.PROTECT, related_name='venue_reports')
     unused_passports = models.BooleanField('unused passports', default=False)
     passports_collected = models.PositiveIntegerField('number collected', null=True, blank=True)
     stamp = models.BooleanField(default=False)

@@ -222,6 +222,7 @@ Not being built now — noted so today's data model doesn't quietly foreclose th
 
 - Not every numbered location on the passport is strictly a cafe (§4) — "Venue" is likely the more accurate long-term name for this entity, and better reflects a possible future use beyond stamp-tracking.
 - The charity may want to retain and organize this venue data (contact person, address, category, participation history across seasons) for eventual use in a simple CRM — e.g. managing the partner relationship, renewals, thank-yous, and popularity tracking (already noted as a nice-to-have in §5.5) independent of any single season's passport.
+- **Started 1 Oct 2026:** a per-season venue record (`VenueSeason`) now tracks recovery of each venue's kit, fed by ambassadors' venue reports. It's intended to grow to hold the venue's recruitment stage, that season's passport number and its ambassador, if MARK asks for venue management.
 - Implication for the current build: model Venue as its own entity with room for these fields (even if most stay empty for now), rather than a flat name+number list — the cost of doing this now is small, and it avoids a data migration later if the CRM idea goes ahead.
 
 ### 11.2 Bearer data for marketing (future events, online merchandising)
