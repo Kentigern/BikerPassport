@@ -66,7 +66,7 @@ Browser tests with pytest-playwright against `live_server`.
   Consent can only be recorded when the bearer gives it: in person at intake, or (future) a
   tick box printed on the paper passport. A bearer never asked stays `pending` and falls under
   the post-season retention purge.
-- **Intake consent (1 Oct 2026, on Railway, not yet Krystal):** the capture form's bearer section asks two separate
+- **Intake consent (1 Oct 2026, live on Krystal):** the capture form's bearer section asks two separate
   questions, each Not set (default) / Yes / No, with the answer date stamped: **keep contact
   details** after the season (`retention_consent_status`, was `next_season_…`, migration `0025`)
   and **use them for marketing** (`marketing_consent_status`). Saved by Save bearer *and* by
@@ -106,10 +106,8 @@ Browser tests with pytest-playwright against `live_server`.
 
 ## Current status (1 Oct 2026 — on Steve's personal PC)
 
-**Pushed to Railway 1 Oct, not yet on Krystal** (92 tests pass): venue report gets a "2nd stamp"
-box and says "1 stamp"/"2 stamps" (migration `0024`); intake consent questions (`0025`, see
-Business rules); MariaDB fixes (see Gotchas). Krystal release: `git pull`, `migrate`,
-`collectstatic` (intake.js changed), restart — and check the MariaDB strict mode comes up clean.
+**Released to Krystal 1 Oct** (migrations up to `0025`): venue report "2nd stamp" box ("1 stamp"/
+"2 stamps"); intake consent questions (see Business rules); MariaDB fixes (see Gotchas).
 
 **Venue kit recovery (1 Oct, on Railway, not yet Krystal):** venue reports now link to their `Venue` and
 `Season` (migrations `0026`/`0027`, which also backfill old reports and grant Site Admin access).
@@ -220,8 +218,8 @@ must never run once real tickets are emailed.)
 - `bikeandbrew.org` is a cPanel **alias (parked domain)**: no document-root setting; check domain types with `uapi DomainInfo list_domains` in cPanel Terminal. Removing an alias can drop its DNS zone — export records first.
 - Krystal's database is **MariaDB**: it can't enforce conditional unique constraints, so "one
   current season" is enforced in `Season.save()` (W036 silenced); the app turns on strict mode
-  for MySQL connections (was W002). On Railway from 1 Oct, not yet on Krystal; strict mode not yet
-  tried on real MariaDB, so watch the first `migrate`/restart after release there.
+  for MySQL connections (was W002). Both live on Krystal since 1 Oct (strict mode came up
+  cleanly on real MariaDB).
 - Krystal MySQL needs `?ssl_disabled=true` on `DATABASE_URL` (PyMySQL SSL handshake fails otherwise).
 - WhiteNoise manifest storage: a missing `collectstatic` makes every page 500.
 - `dumpdata` returns nothing inside the pytest harness — tests serialize directly instead.
