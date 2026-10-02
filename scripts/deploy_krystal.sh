@@ -4,6 +4,9 @@
 # Run in cPanel Terminal or over SSH:
 #     bash ~/bikerpassport/scripts/deploy_krystal.sh
 #
+# The restart takes a few seconds, so pick a quiet moment: check first with
+#     bash ~/bikerpassport/scripts/recent_activity.sh
+#
 # Stops at the first failure. Safe to re-run: every step does nothing if
 # there's nothing new. Wrapped in main() so bash reads the whole script
 # before `git pull` can change this file underneath it.

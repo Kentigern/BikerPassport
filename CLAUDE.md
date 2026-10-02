@@ -125,6 +125,11 @@ reviewed and judged too heavy; this lean version was agreed instead (draft not k
 **Krystal releases** use [scripts/deploy_krystal.sh](scripts/deploy_krystal.sh) (pull, `check`, `migrate`,
 `collectstatic`, restart, login-page check; stops at the first failure). In cPanel Terminal/SSH:
 `bash ~/bikerpassport/scripts/deploy_krystal.sh` — the first time, `git pull` first so the script is there.
+Before deploying, `bash ~/bikerpassport/scripts/recent_activity.sh` (the `recent_activity` command,
+read-only) shows who saved anything in the last 15/60 min, the last save, and unexpired logins.
+
+**Krystal is in real use** (2 Oct 2026): 100+ submissions logged by 17 volunteers. Release at quiet
+moments, and never run load-test cleanup there.
 
 **Ambassador venue report (29 Sep):** replaces the public message form (migration `0023`, 78 tests
 pass, checked in a browser). On Railway via the 29 Sep push; **not yet on Krystal** — release there
