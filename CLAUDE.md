@@ -111,7 +111,7 @@ Browser tests with pytest-playwright against `live_server`.
 **Released to Krystal 1 Oct** (migrations up to `0025`): venue report "2nd stamp" box ("1 stamp"/
 "2 stamps"); intake consent questions (see Business rules); MariaDB fixes (see Gotchas).
 
-**Venue kit recovery (1 Oct, on Railway, not yet Krystal):** venue reports now link to their `Venue` and
+**Venue kit recovery (1 Oct, live on Krystal):** venue reports now link to their `Venue` and
 `Season` (migrations `0026`/`0027`, which also backfill old reports and grant Site Admin access).
 New model `VenueSeason` = a venue's part in one season; admin list **Venues by season** shows each
 active venue's kit recovery status (Outstanding / Collected / Kept at venue for next year / Lost,
