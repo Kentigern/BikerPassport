@@ -65,8 +65,16 @@ def test_list_shows_report_count_and_latest_kit(admin_client, season, venues):
     row = row[:row.index('</tr>')]
     assert f'{timezone.localdate():%d %b} (Pat Jones)' in row
     assert '>12</td>' in row  # passports collected
-    # stamp, 2nd stamp, inkpad, folder, stationery
-    assert re.findall(r'icon-(yes|no)', row) == ['yes', 'yes', 'no', 'no', 'no']
+    # stamp, 2nd stamp, inkpad, folder, stationery, for validation
+    assert re.findall(r'icon-(yes|no)', row) == ['yes', 'yes', 'no', 'no', 'no', 'no']
+
+
+def test_validation_passports_column_shows_the_count(admin_client, season, venues):
+    make_report(venues[0], season, validation_passports=True, validation_collected=5)
+    page = admin_client.get(LIST_URL).content.decode()
+    row = page[page.index('>Venue 1<'):]
+    row = row[:row.index('</tr>')]
+    assert '<td class="field-kit_validation">5</td>' in row
 
 
 def test_kit_columns_are_blank_without_a_report(admin_client, season, venues):

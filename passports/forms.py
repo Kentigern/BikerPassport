@@ -92,6 +92,7 @@ class PublicMessageForm(forms.ModelForm):
         fields = [
             'name', 'ambassador_number', 'venue_name', 'venue_number',
             'unused_passports', 'passports_collected', 'stamp', 'second_stamp', 'inkpad', 'folder', 'unused_stationery',
+            'validation_passports', 'validation_collected',
             'message', 'reply_to',
         ]
         labels = {
@@ -103,6 +104,8 @@ class PublicMessageForm(forms.ModelForm):
             'second_stamp': '2nd stamp',
             'passports_collected': 'Number collected',
             'unused_stationery': 'Unused stationery',
+            'validation_passports': 'Passports for validation',
+            'validation_collected': 'Number collected',
             'message': 'Notes',
             'reply_to': 'Email or phone, if you would like a reply (optional)',
         }
@@ -110,6 +113,7 @@ class PublicMessageForm(forms.ModelForm):
             'ambassador_number': forms.TextInput(attrs={'inputmode': 'numeric'}),
             'venue_number': forms.TextInput(attrs={'inputmode': 'numeric'}),
             'passports_collected': forms.TextInput(attrs={'inputmode': 'numeric'}),
+            'validation_collected': forms.TextInput(attrs={'inputmode': 'numeric'}),
             'message': forms.Textarea(attrs={'rows': 8, 'maxlength': 2000}),
         }
 
@@ -123,7 +127,8 @@ class PublicMessageForm(forms.ModelForm):
             self.fields[name].validators.append(MinValueValidator(1))
         self.fields['ambassador_number'].error_messages['invalid'] = 'Please enter the number in digits only.'
         self.fields['venue_number'].error_messages['invalid'] = 'Please enter the venue number in digits only.'
-        self.fields['passports_collected'].error_messages['invalid'] = 'Please enter a number in digits only.'
+        for name in PublicMessage.COUNTED_ITEMS.values():
+            self.fields[name].error_messages['invalid'] = 'Please enter a number in digits only.'
 
     def clean_name(self):
         return _plain_text(self.cleaned_data['name'], single_line=True)
@@ -145,10 +150,11 @@ class PublicMessageForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
-        collected = cleaned.get('passports_collected')
-        if collected is not None:
-            # A count without the tick still clearly means passports came back.
-            cleaned['unused_passports'] = True
-        elif cleaned.get('unused_passports') and 'passports_collected' not in self.errors:
-            self.add_error('passports_collected', 'Please enter how many unused passports you collected.')
+        for item, count_field in PublicMessage.COUNTED_ITEMS.items():
+            if cleaned.get(count_field) is not None:
+                # A count without the tick still clearly means passports came back.
+                cleaned[item] = True
+            elif cleaned.get(item) and count_field not in self.errors:
+                what = self.fields[item].label.lower()
+                self.add_error(count_field, f'Please enter how many {what} you collected.')
         return cleaned

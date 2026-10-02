@@ -115,6 +115,12 @@
         <label class="check">{{ form.inkpad }} {{ form.inkpad.label }}</label>
         <label class="check">{{ form.folder }} {{ form.folder.label }}</label>
         <label class="check">{{ form.unused_stationery }} {{ form.unused_stationery.label }}</label>
+        <label class="check">{{ form.validation_passports }} {{ form.validation_passports.label }}</label>
+        <div class="collected-count">
+          <label for="{{ form.validation_collected.id_for_label }}">{{ form.validation_collected.label }}</label>
+          {{ form.validation_collected }}
+          {{ form.validation_collected.errors }}
+        </div>
       </fieldset>
 
       <label for="{{ form.message.id_for_label }}">{{ form.message.label }}</label>

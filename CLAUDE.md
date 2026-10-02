@@ -60,7 +60,7 @@ Browser tests with pytest-playwright against `live_server`.
 - **Notes alert**: Save & Exit with anything in Notes emails `DJANGO_NOTES_ALERT_EMAILS`.
 - **Public page** `/message/` is the **ambassador venue report** (since 29 Sep 2026; was a general
   contact form): ambassador name/number, venue name/number (must be a real venue), today's
-  date (server-set), collected kit (unused passports + count, stamp, inkpad, folder, stationery),
+  date (server-set), collected kit (unused passports + count, stamp, 2nd stamp, inkpad, folder, stationery, passports for validation + count — `0028`, 2 Oct, not yet released),
   notes, optional reply contact. Plain text only (letters, digits, ordinary punctuation). Off
   unless `DJANGO_PUBLIC_MESSAGES_ENABLED=True`; login-page link "Ambassador? Send a venue report".
 - **Consent can't be sought by email.** MARK may not email bearers whose address it holds

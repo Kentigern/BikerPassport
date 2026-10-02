@@ -253,6 +253,7 @@ class PublicMessageAdmin(admin.ModelAdmin):
     fields = [
         'created_at', 'report_date', 'season', 'name', 'ambassador_number', 'venue_name', 'venue_number', 'venue',
         'unused_passports', 'passports_collected', 'stamp', 'second_stamp', 'inkpad', 'folder', 'unused_stationery',
+        'validation_passports', 'validation_collected',
         'message', 'reply_to', 'alert_sent', 'handled',
     ]
     readonly_fields = [f for f in fields if f != 'handled']
@@ -302,6 +303,7 @@ class VenueSeasonAdmin(SimpleHistoryAdmin):
     list_display = [
         'venue_number', 'venue_name', 'season', 'recovery_status', 'reports', 'last_report',
         'kit_passports', 'kit_stamp', 'kit_second_stamp', 'kit_inkpad', 'kit_folder', 'kit_stationery',
+        'kit_validation',
     ]
     list_display_links = ['venue_number', 'venue_name']
     list_editable = ['recovery_status']
@@ -359,14 +361,20 @@ class VenueSeasonAdmin(SimpleHistoryAdmin):
 
     # The last report's kit, one column per item: blank with no report, so
     # "not reported" never looks like "reported as not collected".
-    @admin.display(description='Passports')
-    def kit_passports(self, obj):
-        report = getattr(obj, 'latest_report', None)
-        if report is None:
-            return ''
-        if report.passports_collected is not None:
-            return report.passports_collected
-        return _boolean_icon(report.unused_passports)
+    def _counted(field, label):
+        # The number collected, or just a tick/cross if no number was given.
+        @admin.display(description=label)
+        def column(self, obj):
+            report = getattr(obj, 'latest_report', None)
+            if report is None:
+                return ''
+            count = getattr(report, PublicMessage.COUNTED_ITEMS[field])
+            return count if count is not None else _boolean_icon(getattr(report, field))
+        return column
+
+    kit_passports = _counted('unused_passports', 'Passports')
+    kit_validation = _counted('validation_passports', 'For validation')
+    del _counted
 
     def _kit(field, label):
         @admin.display(description=label)

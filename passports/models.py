@@ -598,6 +598,9 @@ class PublicMessage(models.Model):
     inkpad = models.BooleanField(default=False)
     folder = models.BooleanField(default=False)
     unused_stationery = models.BooleanField('unused stationery', default=False)
+    # Bearers' completed passports left at the venue, to be logged.
+    validation_passports = models.BooleanField('passports for validation', default=False)
+    validation_collected = models.PositiveIntegerField('number collected', null=True, blank=True)
     reply_to = models.CharField(
         max_length=200, blank=True, help_text="Email or phone the sender gave for a reply (optional)."
     )
@@ -614,18 +617,23 @@ class PublicMessage(models.Model):
         ('inkpad', 'Inkpad'),
         ('folder', 'Folder'),
         ('unused_stationery', 'Unused stationery'),
+        ('validation_passports', 'Passports for validation'),
     ]
+    # Ticked item -> the field holding how many.
+    COUNTED_ITEMS = {'unused_passports': 'passports_collected', 'validation_passports': 'validation_collected'}
 
     def __str__(self):
         return f"{self.name or 'Anonymous'} — {self.created_at:%Y-%m-%d %H:%M}"
 
     def collected_summary(self):
-        """e.g. "Unused passports (12), 2 stamps, Folder" — or "Nothing"."""
+        """e.g. "Unused passports (12), 2 stamps, Folder, Passports for
+        validation (5)" — or "Nothing"."""
         items = []
         for field, label in self.COLLECTED_ITEMS:
             if getattr(self, field):
-                if field == 'unused_passports' and self.passports_collected is not None:
-                    label = f'{label} ({self.passports_collected})'
+                count = getattr(self, self.COUNTED_ITEMS[field]) if field in self.COUNTED_ITEMS else None
+                if count is not None:
+                    label = f'{label} ({count})'
                 items.append(label)
             if field == 'unused_passports':
                 # The two stamp boxes are reported as a count, so it's explicit.

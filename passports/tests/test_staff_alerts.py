@@ -132,6 +132,21 @@ class TestPublicMessage:
         assert resp.status_code == 200 and field in resp.context['form'].errors
         assert not PublicMessage.objects.exists() and sent == []
 
+    def test_passports_for_validation_with_count(self, client, sent):
+        self._post(client, validation_collected='5')  # a number alone ticks the box
+        report = PublicMessage.objects.get()
+        assert (report.validation_passports, report.validation_collected) == (True, 5)
+        assert report.collected_summary() == 'Unused passports (12), 1 stamp, Passports for validation (5)'
+        assert 'Passports for validation (5)' in sent[0]['text_body']
+
+    def test_passports_for_validation_needs_a_number(self, client, sent):
+        resp = self._post(client, validation_passports='on')
+        assert resp.status_code == 200
+        assert resp.context['form'].errors['validation_collected'] == [
+            'Please enter how many passports for validation you collected.'
+        ]
+        assert not PublicMessage.objects.exists()
+
     def test_checkboxes_notes_and_contact_are_optional(self, client, sent):
         resp = self._post(client, unused_passports=None, passports_collected='', stamp=None, message='', reply_to='')
         assert resp.status_code == 302
