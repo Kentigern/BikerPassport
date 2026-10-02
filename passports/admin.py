@@ -10,6 +10,7 @@ from simple_history.admin import SimpleHistoryAdmin
 from .access import (
     is_bearer_editable,
     is_bearer_verified,
+    is_privileged,
     is_site_admin,
     is_submission_editable,
     mark_bearer_verified,
@@ -90,9 +91,9 @@ class BearerAdmin(SimpleHistoryAdmin):
     since showing it would let anyone read the "secret" straight off the
     screen and defeat the point of requiring it. Verifying (an exact
     phone search here or via the intake form) reveals the field and
-    unlocks editing for that one bearer. Superusers bypass all of this —
-    full list, full search, phone always visible — as the most trusted
-    tier and the one actually administering the app."""
+    unlocks editing for that one bearer. Superusers and Site Admins bypass
+    all of this — full list, full search, phone always visible — as the
+    most trusted tiers, administering the app (see access.py)."""
 
     list_display = [
         'name',
@@ -112,18 +113,18 @@ class BearerAdmin(SimpleHistoryAdmin):
     readonly_fields = ['consent_token']
 
     def get_list_display(self, request):
-        if request.user.is_superuser:
+        if is_privileged(request.user):
             return self.list_display
         return [f for f in self.list_display if f != 'phone']
 
     def get_fields(self, request, obj=None):
         fields = super().get_fields(request, obj)
-        if not request.user.is_superuser and obj is not None and not is_bearer_verified(request, obj.pk):
+        if obj is not None and not is_bearer_verified(request, obj.pk):
             fields = [f for f in fields if f != 'phone']
         return fields
 
     def get_search_results(self, request, queryset, search_term):
-        if not request.user.is_superuser:
+        if not is_privileged(request.user):
             normalized = normalize_uk_phone(search_term)
             if normalized:
                 matches = queryset.filter(phone=normalized)

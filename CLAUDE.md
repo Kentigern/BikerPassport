@@ -46,7 +46,9 @@ Browser tests with pytest-playwright against `live_server`.
 ## Business rules that matter
 
 - **One submission per bearer per season** (DB constraint). Bearer's phone is the
-  unique identifying key and the access-control "secret" (§5.2 of SPEC).
+  unique identifying key and the access-control "secret" (§5.2 of SPEC): Loggers must search by
+  phone before they can edit a bearer or see their phone. Superusers and (since 2 Oct 2026, as MARK
+  has effectively one) Site Admins skip this check (`access.is_privileged`).
 - **Save & Exit locks** a submission (and its bearer) for Loggers; Site Admins/superusers can still edit.
 - **Raffle tickets** (`RaffleTicket`): issued at Save & Exit for every locked submission,
   email or not; sequential per season, zero-padded 6 digits (`000001`); **never

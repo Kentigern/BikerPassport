@@ -4,10 +4,12 @@ access to a Bearer — in the admin or via the intake form — requires both
 the normal Django permission AND this verification, so knowing/guessing a
 bearer's id is never enough on its own.
 
-Superusers bypass this (a deliberate choice, not an oversight): the
-phone-gate protects against staff casually browsing bearer PII by role
-alone, but a superuser is already the most trusted tier in this app and
-the one actually administering it — see SPEC.md §5.2."""
+Superusers and Site Admins bypass this (a deliberate choice, not an
+oversight): the phone-gate protects against Passport Loggers casually
+browsing bearer PII by role alone, but superusers and Site Admins are the
+most trusted tiers, administering the app — see SPEC.md §5.2. (Site
+Admins were added 2 Oct 2026: MARK has effectively one, who needs to
+correct bearers without knowing their phone number.)"""
 
 from django.contrib.auth.models import Permission
 from django.db.models import Q
@@ -22,7 +24,7 @@ def mark_bearer_verified(request, bearer_id):
 
 
 def is_bearer_verified(request, bearer_id):
-    if request.user.is_superuser:
+    if is_privileged(request.user):
         return True
     # bearer_id can come straight from a POST body (bearer_save_view,
     # submission_save_view) — a malformed value is simply unverified, not a
@@ -34,7 +36,9 @@ def is_bearer_verified(request, bearer_id):
     return bearer_id in request.session.get('verified_bearer_ids', [])
 
 
-def _is_privileged(user):
+def is_privileged(user):
+    """Superuser or Site Admin: exempt from the phone-gate and the Save &
+    Exit lock."""
     return user.is_superuser or is_site_admin(user)
 
 
@@ -45,7 +49,7 @@ def is_submission_editable(user, submission):
     stamps to the same bearer's season record is blocked once that's
     happened. Site Admins and superusers are exempt, same tier as the other
     checks in this module."""
-    if _is_privileged(user):
+    if is_privileged(user):
         return True
     return submission.locked_at is None
 
@@ -56,7 +60,7 @@ def is_bearer_editable(user, bearer):
     exited, a Logger can no longer edit the bearer either. A bearer with no
     submission yet this season (a brand-new entry, or a returning bearer in
     a new season) is unaffected."""
-    if _is_privileged(user):
+    if is_privileged(user):
         return True
     season = Season.objects.current()
     if season is None:

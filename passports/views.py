@@ -752,7 +752,7 @@ def bearer_search_view(request):
     """Phone is the access-control key for a bearer's details (per the
     charity's ask): searching by phone reveals full details, searching by
     name only confirms a match exists and prompts for the phone number.
-    Superusers bypass this and get full details either way (§5.2)."""
+    Superusers and Site Admins bypass this and get full details either way (§5.2)."""
     denied = _require_perm(request, 'passports.view_bearer', 'You do not have permission to view bearers.')
     if denied:
         return denied
@@ -765,7 +765,7 @@ def bearer_search_view(request):
 
         if normalized_phone:
             bearers = Bearer.objects.filter(phone=normalized_phone)
-        elif request.user.is_superuser:
+        elif _is_site_admin(request.user):
             bearers = Bearer.objects.filter(name__icontains=q)[:10]
         else:
             bearers = None
