@@ -368,6 +368,16 @@
   }
 
   venueSaveButtons.forEach(function (btn) {
-    btn.addEventListener('click', function () { saveVenues(btn.dataset.exit === 'true'); });
+    btn.addEventListener('click', function () {
+      var exit = btn.dataset.exit === 'true';
+      // Save & Exit emails the bearer — a premature one sends them the
+      // wrong stamps, so check first.
+      if (exit && !window.confirm(
+        'Finished entering all the stamps?\n\nSave & Exit locks this passport and emails the bearer.'
+      )) {
+        return;
+      }
+      saveVenues(exit);
+    });
   });
 })();

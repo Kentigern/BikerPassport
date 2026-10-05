@@ -54,9 +54,14 @@ Browser tests with pytest-playwright against `live_server`.
   email or not; sequential per season, zero-padded 6 digits (`000001`); **never
   renumbered or removed** once issued (they've been emailed). The export and the
   live draw work only from issued numbers; the draw reveals the winner's own number.
-- **Confirmation email** (§5.3): sent once at Save & Exit via Resend, transactional —
+- **Confirmation email** (§5.3): sent at Save & Exit via Resend, transactional —
   **no consent request** in it (raffle data needs none). Failures set
   `email_send_failed`; staff retry via the admin action or `retry_confirmation_emails`.
+  Since 4 Oct 2026 (not yet released): a later Save & Exit of an already-locked submission (only
+  Site Admins/superusers can — correcting a Logger's premature exit) emails again, subject "…has
+  been updated", headed "This replaces our earlier email". Save & Exit now asks "Finished entering
+  all the stamps?" first (Cancel = nothing saved). Earlier corrected submissions: resend via the
+  admin action.
 - **Notes alert**: Save & Exit with anything in Notes emails `DJANGO_NOTES_ALERT_EMAILS`.
 - **Public page** `/message/` is the **ambassador venue report** (since 29 Sep 2026; was a general
   contact form): ambassador name/number, venue name/number (must be a real venue), today's

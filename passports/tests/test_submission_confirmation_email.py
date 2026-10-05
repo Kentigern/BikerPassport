@@ -130,6 +130,37 @@ class TestSubmissionSaveExitTriggersEmail:
         assert submission.email_sent_at is not None
         assert submission.email_send_failed is False
 
+    def test_re_exit_after_a_correction_sends_an_updated_email(
+        self, client, django_user_model, season, venues, monkeypatch
+    ):
+        # A Logger's premature Save & Exit emails a partial passport; the
+        # Site Admin/superuser who corrects it and exits again emails the
+        # bearer the corrected version, marked as an update.
+        client.force_login(django_user_model.objects.create_superuser(username='admin', password='x'))
+        calls = []
+        monkeypatch.setattr('passports.emailing.resend_client.send_email', lambda **kwargs: calls.append(kwargs))
+
+        resp, bearer_id = self._save_bearer_and_submission(client, season, venues[0])
+        submission_id = resp.json()['submission_id']
+        assert calls[0]['subject'] == 'Your Bike + Brew passport has been processed'
+        assert 'replaces our earlier email' not in calls[0]['html_body']
+
+        def save(exit):
+            return client.post('/passports/submissions/save/', data={
+                'bearer_id': bearer_id, 'submission_id': submission_id,
+                'venues_stamped': [v.pk for v in venues[:12]], 'date_received': '2026-06-01', 'notes': '', 'exit': exit,
+            })
+
+        save('false')  # a plain Save of the locked submission sends nothing
+        assert len(calls) == 1
+
+        assert save('true').json()['stamp_count'] == 12
+        assert len(calls) == 2
+        assert calls[1]['subject'] == 'Your Bike + Brew passport has been updated'
+        assert 'replaces our earlier email' in calls[1]['html_body']
+        assert '<strong>12</strong> stamps' in calls[1]['html_body']
+        assert RaffleTicket.objects.get(submission_id=submission_id).number in calls[1]['html_body']
+
     def test_exit_without_email_on_file_skips_sending(
         self, client, django_user_model, season, venues, monkeypatch
     ):

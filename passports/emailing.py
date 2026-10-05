@@ -57,14 +57,14 @@ def build_unsubscribe_url(bearer, purpose):
     return f"{settings.PUBLIC_BASE_URL}{path}"
 
 
-def send_submission_confirmation(submission):
+def send_submission_confirmation(submission, updated=False):
     """The confirmation email (§5.3) — sent via Resend the first time a
     submission is saved & exited (see submission_save_view), and again on
     a staff retry (send_confirmations). Just the stamps/venues/tickets
     receipt — transactional, covering only data needed to run the raffle,
-    so no consent request: that goes out later as the first bulk email
-    (§5.3/§5.6). Only sends: use send_and_record_confirmation to also
-    record the outcome."""
+    so no consent request. `updated` marks it as replacing an earlier one
+    (a corrected submission saved & exited again). Only sends: use
+    send_and_record_confirmation to also record the outcome."""
     bearer = submission.bearer
     tickets = RaffleTicket.objects.ensure_for_submission(submission)
     html_body = render_to_string(
@@ -75,11 +75,12 @@ def send_submission_confirmation(submission):
             'stamp_count': submission.stamp_count,
             'raffle_tickets': submission.raffle_tickets,
             'ticket_numbers': [ticket.number for ticket in tickets],
+            'updated': updated,
         },
     )
     resend_client.send_email(
         to=bearer.email,
-        subject='Your Bike + Brew passport has been processed',
+        subject='Your Bike + Brew passport has been updated' if updated else 'Your Bike + Brew passport has been processed',
         html_body=html_body,
         text_body=strip_tags(html_body),
     )
@@ -142,7 +143,7 @@ def send_notes_alert(submission):
     )
 
 
-def send_and_record_confirmation(submission):
+def send_and_record_confirmation(submission, updated=False):
     """Sends the confirmation email and records the outcome on the
     submission — emailed + email_sent_at on success, email_send_failed on
     any error (a bad address/API error must never propagate: it would
@@ -150,7 +151,7 @@ def send_and_record_confirmation(submission):
     bearer has an email first. Returns None on success, else the error
     message (e.g. Resend's reason) so staff-facing callers can show why."""
     try:
-        send_submission_confirmation(submission)
+        send_submission_confirmation(submission, updated=updated)
     except Exception as exc:  # noqa: BLE001 — see docstring
         logger.exception('Confirmation email failed for submission %s', submission.pk)
         submission.email_send_failed = True

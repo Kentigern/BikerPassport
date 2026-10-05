@@ -30,6 +30,7 @@ def test_logger_can_keep_saving_before_exit_but_locked_after(season, venues, liv
     submission_id = page.locator('#submission_id').input_value()
 
     exit_btn = page.locator('.venue-save-btn[data-exit="true"]').first
+    page.once('dialog', lambda dialog: dialog.accept())
     exit_btn.click()
     page.wait_for_url(f'{live_server.url}/passports/submissions/new/')
 
@@ -57,6 +58,7 @@ def test_superuser_can_still_edit_after_exit(season, venues, live_server, logged
     page.wait_for_selector('.venue-save-status.status-ok')
     submission_id = page.locator('#submission_id').input_value()
 
+    page.once('dialog', lambda dialog: dialog.accept())
     page.locator('.venue-save-btn[data-exit="true"]').first.click()
     page.wait_for_url(f'{live_server.url}/passports/submissions/new/')
 
@@ -121,3 +123,21 @@ def test_raw_admin_blocks_edits_to_locked_records_for_logger(client, season, log
         f'/admin/passports/passportsubmission/{submission.pk}/change/', data={'notes': 'changed'}
     )
     assert resp.status_code == 403
+
+
+def test_cancelling_the_save_and_exit_check_saves_nothing(season, venues, live_server, logged_in_page):
+    page = logged_in_page
+    page.fill('#id_name', 'Cancelled Exit Bearer')
+    page.fill('#id_phone', '07700 100014')
+    page.click('#bearer-save-btn')
+    page.wait_for_selector('#bearer-save-status.status-ok')
+    page.locator('.venue-row input[type=checkbox]').first.check()
+
+    messages = []
+    page.once('dialog', lambda dialog: (messages.append(dialog.message), dialog.dismiss()))
+    page.locator('.venue-save-btn[data-exit="true"]').first.click()
+    page.wait_for_timeout(500)
+
+    assert 'Save & Exit locks this passport and emails the bearer' in messages[0]
+    assert page.url == f'{live_server.url}/passports/submissions/new/'
+    assert not PassportSubmission.objects.exists()

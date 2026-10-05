@@ -710,11 +710,15 @@ def submission_save_view(request):
     # Save & Exit closes this submission out for good — see
     # access.is_submission_editable/is_bearer_editable, which a Logger
     # (but not a Site Admin/superuser) is held to from now on. The
-    # confirmation email (§5.3) fires exactly once, at this same moment,
-    # for the same reason: re-exiting an already-locked submission is
-    # blocked above, so this branch only ever runs the first time. A failed
-    # send is recorded, not raised — staff retry it from the admin later.
-    just_locked = request.POST.get('exit') == 'true' and submission.locked_at is None
+    # confirmation email (§5.3) fires at this same moment. A later Save &
+    # Exit of an already-locked submission — only a Site Admin/superuser
+    # can, typically correcting a Logger's premature exit — emails the
+    # bearer again, marked as an update, so they get the corrected stamps
+    # and tickets. A failed send is recorded, not raised — staff retry it
+    # from the admin later.
+    exiting = request.POST.get('exit') == 'true'
+    just_locked = exiting and submission.locked_at is None
+    re_exited = exiting and not just_locked
     if just_locked:
         submission.locked_at = timezone.now()
         submission.save(update_fields=['locked_at'])
@@ -726,8 +730,8 @@ def submission_save_view(request):
     if submission.locked_at is not None:
         RaffleTicket.objects.ensure_for_submission(submission)
 
-    if just_locked and submission.bearer.email:
-        send_and_record_confirmation(submission)
+    if exiting and submission.bearer.email:
+        send_and_record_confirmation(submission, updated=re_exited)
 
     # Anything in Notes is an anomaly someone should follow up — tell staff
     # once, when the Logger finishes (not on every intermediate save).
