@@ -314,6 +314,23 @@ class PassportSubmission(models.Model):
         "access.is_submission_editable/is_bearer_editable.",
     )
 
+    voided_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Set when a superuser voids this submission (e.g. a bearer's "
+        "rule-breaking second passport under another phone number) — see void(). "
+        "The record and its ticket numbers stay, but it's out of the raffle, "
+        "the dashboard counts, and read-only for everyone.",
+    )
+    voided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='voided_submissions',
+    )
+    void_reason = models.TextField(blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -341,6 +358,26 @@ class PassportSubmission(models.Model):
     def raffle_tickets(self):
         return min(self.stamp_count // 10, self.MAX_RAFFLE_TICKETS)
 
+    def void(self, user, reason):
+        """Takes this submission and its issued tickets out of the raffle
+        without deleting anything: ticket numbers were emailed, so they stay
+        on record (and are never reused) but are marked voided, which the
+        export and the draw leave out. Saved through the model so
+        simple_history records who voided it and why for the audit log.
+        Refused once one of its tickets has won — a recorded draw can't be
+        undone."""
+        if self.voided_at is not None:
+            raise ValueError(f'Intake #{self.intake_number} is already voided.')
+        if RaffleWinner.objects.filter(ticket__submission=self).exists():
+            raise ValueError(f'Intake #{self.intake_number} has a winning ticket, so it can\'t be voided.')
+        now = timezone.now()
+        with transaction.atomic():
+            self.voided_at = now
+            self.voided_by = user
+            self.void_reason = reason
+            self.save(update_fields=['voided_at', 'voided_by', 'void_reason', 'updated_at'])
+            self.ticket_numbers.filter(voided_at=None).update(voided_at=now)
+
 
 class RaffleTicketManager(models.Manager):
     def ensure_for_submission(self, submission):
@@ -357,6 +394,9 @@ class RaffleTicketManager(models.Manager):
         PassportSubmission.intake_number is — a
         SELECT ... FOR UPDATE on the season row — so concurrent saves
         can't race to the same number."""
+        if submission.voided_at is not None:
+            # A voided submission is out of the raffle — nothing new is issued.
+            return list(self.filter(submission=submission).order_by('number'))
         wanted = submission.raffle_tickets
         with transaction.atomic():
             season = Season.objects.select_for_update().get(pk=submission.season_id)
@@ -381,7 +421,7 @@ class RaffleTicketManager(models.Manager):
         export/draw (which work purely from issued numbers) can't miss a
         submission that was saved but never Save & Exited. One query finds
         the short ones; only those pay the per-submission cost."""
-        submissions = PassportSubmission.objects.filter(season=season)
+        submissions = PassportSubmission.objects.filter(season=season, voided_at=None)
         if locked_only:
             submissions = submissions.exclude(locked_at=None)
         candidates = submissions.annotate(
@@ -409,6 +449,12 @@ class RaffleTicket(models.Model):
     submission = models.ForeignKey(PassportSubmission, on_delete=models.PROTECT, related_name='ticket_numbers')
     number = models.CharField(max_length=6, help_text="Sequential per season, zero-padded, e.g. '000001'.")
     created_at = models.DateTimeField(auto_now_add=True)
+    voided_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Set with its submission's (PassportSubmission.void) — a voided "
+        "number stays on record but is out of the export and the draw.",
+    )
 
     class Meta:
         ordering = ['season', 'number']

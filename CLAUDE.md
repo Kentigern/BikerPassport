@@ -6,9 +6,9 @@ full spec) and [README.md](README.md) (setup). **Never put secrets in this repo*
 
 ## Keeping this file current
 
-Steve works on this repo from two PCs, each with its own Claude memory that does
-**not** sync — this file is the shared memory. From 28 Sep 2026 his **personal PC** is the
-main one (dev setup, Railway CLI and SSH key are there); the work PC is occasional. So:
+Steve works on this repo from more than one machine, each with its own Claude memory that does
+**not** sync — this file is the shared memory. From 5 Oct 2026 his **new laptop** is the
+main one (his desktop is no longer a dev machine); the work PC is occasional. So:
 
 - **Every push includes a CLAUDE.md update.** Before pushing, update "Current
   status", the Day 1 list, "Waiting on Steve", "Parked" and "Gotchas" to match
@@ -62,6 +62,15 @@ Browser tests with pytest-playwright against `live_server`.
   been updated", headed "This replaces our earlier email". Save & Exit now asks "Finished entering
   all the stamps?" first (Cancel = nothing saved). Earlier corrected submissions: resend via the
   admin action.
+- **Voiding a submission** (13 Oct 2026, migration `0029`, not yet released): for a bearer who
+  broke the one-per-season rule by submitting again under another phone (the DB constraint can't
+  catch that). Superuser-only admin action "Void submission and its raffle tickets" on Passport
+  submissions, with a confirmation page and a required reason. Nothing is deleted: the submission
+  and its tickets get `voided_at` (plus `voided_by`/`void_reason` on the submission). Voided tickets
+  keep their numbers (never reused) but are out of the export and the draw. A voided submission
+  is read-only for everyone (even superusers), gets no new tickets or confirmation emails, and is
+  left out of the dashboard counts. The audit log shows it as "Voided — … tickets voided: … reason: …".
+  Refused once one of its tickets has won. There's no un-void.
 - **Notes alert**: Save & Exit with anything in Notes emails `DJANGO_NOTES_ALERT_EMAILS`.
 - **Public page** `/message/` is the **ambassador venue report** (since 29 Sep 2026; was a general
   contact form): ambassador name/number, venue name/number (must be a real venue), today's
@@ -133,7 +142,7 @@ reviewed and judged too heavy; this lean version was agreed instead (draft not k
 Before deploying, `bash ~/bikerpassport/scripts/recent_activity.sh` (the `recent_activity` command,
 read-only) shows who saved anything in the last 15/60 min, the last save, and unexpired logins.
 
-**Krystal is in real use** (2 Oct 2026): 100+ submissions logged by 17 volunteers. Release at quiet
+**Krystal is in real use** (2 Oct 2026): 100+ submissions logged by 17 volunteers. By 5 Oct real use had passed the projected peak, which also served as the real-passport smoke test. It performed well and was very well received by MARK's trustees and volunteers; Steve plans to expand it with new use cases. Release at quiet
 moments, and never run load-test cleanup there.
 
 **Ambassador venue report (29 Sep):** replaces the public message form (migration `0023`, 78 tests
@@ -168,8 +177,8 @@ the cutover) on hold with the WordPress work. Intake will start at #1 / ticket 0
 - **Railway fixed (25 Sep, 00:18 redeploy):** `DJANGO_DEBUG` was explicitly True — now False
   (verified: http→https 301, HSTS, secure cookies, plain 404, CSRF OK). Misnamed
   `DJANGO_PUBLIC_MESSAGES_ALERT_EMAILS` renamed to `DJANGO_PUBLIC_MESSAGE_ALERT_EMAILS` (same value).
-- Personal PC has a dev setup: Python 3.11 `.venv`, `pip install -r requirements-dev.txt`,
-  `playwright install chromium`; 58 tests pass.
+- The laptop (main machine since 5 Oct) has a dev setup: Python 3.11 `.venv`, `pip install -r requirements-dev.txt`,
+  `playwright install chromium`, Railway CLI via npm; 116 tests pass (13 Oct).
 
 **Domains:** `bikeandbrew.org` is an alias of the account's main domain. The 24 Sep plan to make it
 a full domain is superseded by the 29 Sep layout (see Hosting above); intake runs on
@@ -190,9 +199,8 @@ timeout, data-transfer matching. Nothing tested on Krystal yet. Railway holds on
 RaffleWinner (removed by `reset_intake_data` if Railway becomes the fallback).
 
 Day 1 MVP — remaining (Day 1 may be brought forward at short notice):
-1. Real-passport smoke test on Krystal (then decide whether to keep or clean it up).
-2. Later, raise HSTS (`DJANGO_SECURE_HSTS_SECONDS`) once HTTPS has been solid for a while.
-3. Domain switchover (runbook Phase 3: main domain → makeyourmark.co.uk, app → its subdomain,
+1. Later, raise HSTS (`DJANGO_SECURE_HSTS_SECONDS`) once HTTPS has been solid for a while.
+2. Domain switchover (runbook Phase 3: main domain → makeyourmark.co.uk, app → its subdomain,
    bikeandbrew.org redirects) — **on hold** with the WordPress handover. Ask Krystal first whether
    aliases/subdomains count toward the one-domain limit and how to rename the main domain.
 

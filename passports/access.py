@@ -48,7 +48,10 @@ def is_submission_editable(user, submission):
     submission_save_view) — even a later visit that would otherwise add more
     stamps to the same bearer's season record is blocked once that's
     happened. Site Admins and superusers are exempt, same tier as the other
-    checks in this module."""
+    checks in this module — except for a voided submission
+    (PassportSubmission.void), which no one can edit."""
+    if submission.voided_at is not None:
+        return False
     if is_privileged(user):
         return True
     return submission.locked_at is None

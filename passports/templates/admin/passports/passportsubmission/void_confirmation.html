@@ -1,0 +1,45 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block bodyclass %}{{ block.super }} app-{{ opts.app_label }} model-{{ opts.model_name }} delete-confirmation{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+  &rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+  &rsaquo; Void submissions
+</div>
+{% endblock %}
+
+{% block content %}
+<p>Voiding takes these submissions and their raffle tickets out of the raffle export and the draw,
+  and makes them read-only for everyone. Nothing is deleted: the records and ticket numbers stay,
+  and the audit log records who voided them and why. <strong>This can't be undone from here.</strong></p>
+
+<ul>
+  {% for submission in submissions %}
+    <li>
+      Intake #{{ submission.intake_number }} ({{ submission.season }}) — {{ submission.bearer.name }},
+      {{ submission.stamp_count }} stamps, tickets:
+      {% for ticket in submission.ticket_numbers.all %}{{ ticket.number }}{% if not forloop.last %}, {% endif %}{% empty %}none{% endfor %}
+      {% if submission.voided_at %}<strong>(already voided — will be skipped)</strong>{% endif %}
+    </li>
+  {% endfor %}
+</ul>
+
+<form method="post">{% csrf_token %}
+  {% for submission in submissions %}
+    <input type="hidden" name="{{ action_checkbox_name }}" value="{{ submission.pk }}">
+  {% endfor %}
+  <input type="hidden" name="action" value="void_submissions">
+  <input type="hidden" name="confirm" value="yes">
+  <p>
+    <label for="void_reason"><strong>Reason</strong> (required — recorded in the audit log):</label><br>
+    <textarea id="void_reason" name="void_reason" rows="3" cols="60" required>{{ reason }}</textarea>
+    {% if reason_missing %}<br><span class="errornote">Please give a reason.</span>{% endif %}
+  </p>
+  <input type="submit" value="Yes, void them">
+  <a href="{% url opts|admin_urlname:'changelist' %}" class="button cancel-link">No, take me back</a>
+</form>
+{% endblock %}

@@ -107,11 +107,14 @@ def dashboard_view(request):
     if season is None:
         return render(request, 'passports/dashboard.html', context)
 
-    submissions = PassportSubmission.objects.filter(season=season)
+    # Voided submissions (PassportSubmission.void) are left out of every count.
+    submissions = PassportSubmission.objects.filter(season=season, voided_at=None)
 
     top_venues = _ranked(
         Venue.objects.annotate(
-            visit_count=Count('submissions', filter=Q(submissions__season=season))
+            visit_count=Count(
+                'submissions', filter=Q(submissions__season=season, submissions__voided_at=None)
+            )
         )
         .filter(visit_count__gt=0)
         .order_by('-visit_count', 'name'),
@@ -121,7 +124,10 @@ def dashboard_view(request):
     top_loggers = _ranked(
         get_user_model()
         .objects.annotate(
-            logged_count=Count('entered_submissions', filter=Q(entered_submissions__season=season))
+            logged_count=Count(
+                'entered_submissions',
+                filter=Q(entered_submissions__season=season, entered_submissions__voided_at=None),
+            )
         )
         .filter(logged_count__gt=0)
         .order_by('-logged_count', 'username'),
@@ -132,7 +138,7 @@ def dashboard_view(request):
         Bearer.objects.annotate(
             venues_visited=Count(
                 'submissions__venues_stamped',
-                filter=Q(submissions__season=season),
+                filter=Q(submissions__season=season, submissions__voided_at=None),
                 distinct=True,
             )
         )
@@ -143,7 +149,9 @@ def dashboard_view(request):
 
     all_venues = _ranked(
         Venue.objects.annotate(
-            visit_count=Count('submissions', filter=Q(submissions__season=season))
+            visit_count=Count(
+                'submissions', filter=Q(submissions__season=season, submissions__voided_at=None)
+            )
         ).order_by('-visit_count', 'name'),
         'visit_count',
     )
@@ -151,7 +159,10 @@ def dashboard_view(request):
     all_loggers = _ranked(
         get_user_model()
         .objects.annotate(
-            logged_count=Count('entered_submissions', filter=Q(entered_submissions__season=season))
+            logged_count=Count(
+                'entered_submissions',
+                filter=Q(entered_submissions__season=season, entered_submissions__voided_at=None),
+            )
         )
         .order_by('-logged_count', 'username'),
         'logged_count',
@@ -161,7 +172,7 @@ def dashboard_view(request):
         Bearer.objects.annotate(
             venues_visited=Count(
                 'submissions__venues_stamped',
-                filter=Q(submissions__season=season),
+                filter=Q(submissions__season=season, submissions__voided_at=None),
                 distinct=True,
             )
         ).order_by('-venues_visited', 'name'),
@@ -209,7 +220,11 @@ def raffle_export_view(request):
 
     if season is not None:
         RaffleTicket.objects.issue_missing_for_season(season)
-        tickets = RaffleTicket.objects.filter(season=season).select_related('submission__bearer').order_by('number')
+        tickets = (
+            RaffleTicket.objects.filter(season=season, voided_at=None)
+            .select_related('submission__bearer')
+            .order_by('number')
+        )
         entry_count = 0
         for ticket in tickets:
             bearer = ticket.submission.bearer
@@ -233,7 +248,7 @@ def _raffle_draw_pool(season):
     RaffleTicket.objects.issue_missing_for_season(season)
     already_won = RaffleWinner.objects.filter(season=season).values_list('bearer_id', flat=True)
     return list(
-        RaffleTicket.objects.filter(season=season)
+        RaffleTicket.objects.filter(season=season, voided_at=None)
         .exclude(submission__bearer_id__in=already_won)
         .values_list('pk', 'submission__bearer_id')
     )
@@ -294,7 +309,7 @@ def raffle_draw_spin_view(request):
     ticket_id, _ = random.SystemRandom().choice(pool)
     ticket = RaffleTicket.objects.select_related('submission__bearer').get(pk=ticket_id)
     winner_bearer = ticket.submission.bearer
-    winner_tickets = RaffleTicket.objects.filter(submission_id=ticket.submission_id).count()
+    winner_tickets = RaffleTicket.objects.filter(submission_id=ticket.submission_id, voided_at=None).count()
     ticket_number = ticket.number
     prize = request.POST.get('prize', '').strip()
 
@@ -362,7 +377,18 @@ def _submission_summary(history_type, record):
         season_desc = str(record.season) if record.season_id else 'no season'
     except Season.DoesNotExist:
         season_desc = f"season #{record.season_id} (deleted)"
-    return f"{HISTORY_LABELS[history_type]} — #{record.intake_number} ({season_desc}) — {bearer_desc}"
+    summary = f"{HISTORY_LABELS[history_type]} — #{record.intake_number} ({season_desc}) — {bearer_desc}"
+    # The change that voided it (PassportSubmission.void) — nothing edits a
+    # voided submission afterwards, but check the previous row to be sure.
+    if history_type == '~' and record.voided_at and not getattr(record.prev_record, 'voided_at', None):
+        tickets = ', '.join(
+            RaffleTicket.objects.filter(submission_id=record.id).order_by('number').values_list('number', flat=True)
+        ) or 'none'
+        summary = (
+            f"Voided — #{record.intake_number} ({season_desc}) — {bearer_desc} — "
+            f"tickets voided: {tickets} — reason: {record.void_reason}"
+        )
+    return summary
 
 
 def _event(category, timestamp, actor, summary):
@@ -619,6 +645,8 @@ def submission_save_view(request):
         # overwritten onto someone else's record.
         if int(bearer_id) != existing_submission.bearer_id:
             return _permission_denied_json("A submission's bearer cannot be changed.")
+        if existing_submission.voided_at is not None:
+            return _permission_denied_json('This submission has been voided, and can no longer be edited.')
         if not is_submission_editable(request.user, existing_submission):
             return _permission_denied_json(
                 'This submission has already been saved and exited, and can no longer be edited.'
@@ -667,6 +695,10 @@ def submission_save_view(request):
             # rather than creating a duplicate.
             existing = PassportSubmission.objects.filter(bearer=bearer, season=season).first()
             if existing:
+                if existing.voided_at is not None:
+                    return _permission_denied_json(
+                        'This bearer already has a submission this season, and it has been voided.'
+                    )
                 if not is_submission_editable(request.user, existing):
                     return _permission_denied_json(
                         'This bearer already has a submission this season, and it has already been '

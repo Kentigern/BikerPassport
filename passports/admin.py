@@ -1,8 +1,10 @@
 from django.contrib import admin, messages
+from django.contrib.admin import helpers
 from django.contrib.admin.templatetags.admin_list import _boolean_icon
 from django.contrib.admin.views.main import ChangeList
 from django.db.models import Count, F, OuterRef, Q, Subquery
 from django.shortcuts import redirect
+from django.template.response import TemplateResponse
 from django.urls import reverse
 from django.utils.html import format_html
 from simple_history.admin import SimpleHistoryAdmin
@@ -143,6 +145,21 @@ class BearerAdmin(SimpleHistoryAdmin):
         return is_bearer_verified(request, obj.pk) and is_bearer_editable(request.user, obj)
 
 
+class VoidedFilter(admin.SimpleListFilter):
+    title = 'voided'
+    parameter_name = 'voided'
+
+    def lookups(self, request, model_admin):
+        return [('yes', 'Yes'), ('no', 'No')]
+
+    def queryset(self, request, queryset):
+        if self.value() == 'yes':
+            return queryset.exclude(voided_at=None)
+        if self.value() == 'no':
+            return queryset.filter(voided_at=None)
+        return queryset
+
+
 @admin.register(PassportSubmission)
 class PassportSubmissionAdmin(SimpleHistoryAdmin):
     """intake_number/status/entered_by/email_sent_at/email_send_failed are
@@ -167,8 +184,11 @@ class PassportSubmissionAdmin(SimpleHistoryAdmin):
         'email_sent_at',
         'email_send_failed',
         'issued_ticket_numbers',
+        'voided_at',
+        'voided_by',
+        'void_reason',
     ]
-    actions = ['send_confirmation_emails']
+    actions = ['send_confirmation_emails', 'void_submissions']
     list_display = [
         'intake_number',
         'season',
@@ -179,8 +199,9 @@ class PassportSubmissionAdmin(SimpleHistoryAdmin):
         'date_received',
         'entered_by',
         'email_send_failed',
+        'is_voided',
     ]
-    list_filter = ['season', 'status', 'email_send_failed']
+    list_filter = ['season', 'status', 'email_send_failed', VoidedFilter]
     search_fields = ['bearer__name', 'bearer__email', 'intake_number']
     filter_horizontal = ['venues_stamped']
 
@@ -197,9 +218,54 @@ class PassportSubmissionAdmin(SimpleHistoryAdmin):
     def has_site_admin_permission(self, request):
         return request.user.is_superuser or is_site_admin(request.user)
 
+    def has_superuser_permission(self, request):
+        return request.user.is_superuser
+
     @admin.display(description='Raffle ticket numbers')
     def issued_ticket_numbers(self, obj):
-        return ', '.join(obj.ticket_numbers.order_by('number').values_list('number', flat=True)) or '—'
+        numbers = [
+            f'{number} (voided)' if voided_at else number
+            for number, voided_at in obj.ticket_numbers.order_by('number').values_list('number', 'voided_at')
+        ]
+        return ', '.join(numbers) or '—'
+
+    @admin.display(description='Voided', boolean=True)
+    def is_voided(self, obj):
+        return obj.voided_at is not None
+
+    @admin.action(description='Void submission and its raffle tickets', permissions=['superuser'])
+    def void_submissions(self, request, queryset):
+        """Takes a rule-breaking submission (e.g. a bearer's second passport
+        under another phone number) out of the raffle without deleting it —
+        see PassportSubmission.void. Asks for confirmation and a reason
+        first, which goes in the audit log."""
+        submissions = list(queryset.select_related('bearer', 'season').order_by('intake_number'))
+        reason = request.POST.get('void_reason', '').strip()
+        if request.POST.get('confirm') == 'yes' and reason:
+            for submission in submissions:
+                try:
+                    submission.void(request.user, reason)
+                except ValueError as exc:
+                    self.message_user(request, str(exc), messages.ERROR)
+                else:
+                    tickets = ', '.join(submission.ticket_numbers.values_list('number', flat=True)) or 'none'
+                    self.message_user(
+                        request, f'Voided intake #{submission.intake_number} (tickets voided: {tickets}).'
+                    )
+            return None
+        return TemplateResponse(
+            request,
+            'admin/passports/passportsubmission/void_confirmation.html',
+            {
+                **self.admin_site.each_context(request),
+                'title': 'Void submissions',
+                'opts': self.model._meta,
+                'submissions': submissions,
+                'reason': reason,
+                'reason_missing': request.POST.get('confirm') == 'yes' and not reason,
+                'action_checkbox_name': helpers.ACTION_CHECKBOX_NAME,
+            },
+        )
 
     def save_related(self, request, form, formsets, change):
         # venues_stamped is saved here, not in save_model — so a Site Admin
@@ -221,7 +287,7 @@ class PassportSubmissionAdmin(SimpleHistoryAdmin):
         remaining = len(submissions) > CONFIRMATION_RETRY_BATCH_LIMIT
         sent, failures, skipped = send_confirmations(submissions[:CONFIRMATION_RETRY_BATCH_LIMIT])
 
-        self.message_user(request, f'Confirmation emails: {sent} sent, {len(failures)} failed, {skipped} skipped (not yet Save & Exited, or no email on file).')
+        self.message_user(request, f'Confirmation emails: {sent} sent, {len(failures)} failed, {skipped} skipped (not yet Save & Exited, voided, or no email on file).')
         # Resend's own reason, per submission — a bad address and a sending
         # misconfiguration (e.g. unverified domain) need very different fixes.
         for submission, error in failures[:10]:
@@ -424,8 +490,8 @@ class RaffleTicketAdmin(admin.ModelAdmin):
     only via RaffleTicketManager.ensure_for_submission (§5.3), and once
     emailed to a bearer must stay exactly as issued."""
 
-    list_display = ['number', 'season', 'submission', 'created_at']
-    list_filter = ['season']
+    list_display = ['number', 'season', 'submission', 'created_at', 'voided_at']
+    list_filter = ['season', VoidedFilter]
     search_fields = ['number', 'submission__bearer__name']
 
     def has_add_permission(self, request):

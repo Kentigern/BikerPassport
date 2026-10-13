@@ -170,6 +170,7 @@ def outstanding_confirmations():
     covers both failed sends and an email address added after the fact."""
     return (
         PassportSubmission.objects.exclude(locked_at=None)
+        .filter(voided_at=None)
         .exclude(bearer__email='')
         .exclude(status=PassportSubmission.Status.EMAILED)
         .select_related('bearer')
@@ -179,13 +180,13 @@ def outstanding_confirmations():
 def send_confirmations(submissions):
     """Staff retry path (admin action / retry_confirmation_emails command)
     — sends to each submission in turn, throttled to stay under Resend's
-    rate limit. Skips any not yet locked (still mid-intake) or without an
-    email. Returns (sent, failures, skipped): failures is a list of
+    rate limit. Skips any not yet locked (still mid-intake), voided, or
+    without an email. Returns (sent, failures, skipped): failures is a list of
     (submission, error message) pairs."""
     sent = skipped = 0
     failures = []
     for submission in submissions:
-        if submission.locked_at is None or not submission.bearer.email:
+        if submission.locked_at is None or submission.voided_at is not None or not submission.bearer.email:
             skipped += 1
             continue
         if sent + len(failures) and BULK_SEND_INTERVAL_SECONDS:
