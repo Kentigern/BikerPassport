@@ -1,3 +1,5 @@
+import time
+
 from django.contrib import admin, messages
 from django.contrib.admin import helpers
 from django.contrib.admin.templatetags.admin_list import _boolean_icon
@@ -17,7 +19,7 @@ from .access import (
     is_submission_editable,
     mark_bearer_verified,
 )
-from .emailing import send_confirmations
+from .emailing import BULK_SEND_INTERVAL_SECONDS, send_confirmations, send_submission_confirmation
 from .models import (
     Bearer,
     EmailCampaign,
@@ -188,7 +190,7 @@ class PassportSubmissionAdmin(SimpleHistoryAdmin):
         'voided_by',
         'void_reason',
     ]
-    actions = ['send_confirmation_emails', 'void_submissions']
+    actions = ['send_confirmation_emails', 'email_me_confirmation_copy', 'void_submissions']
     list_display = [
         'intake_number',
         'season',
@@ -295,6 +297,36 @@ class PassportSubmissionAdmin(SimpleHistoryAdmin):
         if len(failures) > 10:
             self.message_user(request, f'…and {len(failures) - 10} more — see the application logs.', messages.ERROR)
         if remaining:
+            self.message_user(
+                request,
+                f'Only the first {CONFIRMATION_RETRY_BATCH_LIMIT} were processed this run — run the action again for the rest.',
+                messages.WARNING,
+            )
+
+    @admin.action(description='Email me a copy of the confirmation email', permissions=['site_admin'])
+    def email_me_confirmation_copy(self, request, queryset):
+        """Sends each selected submission's confirmation email to the
+        logged-in user (not the bearer), with the bearer's full details on
+        top — a quick way to get submissions out, e.g. ones logged on the
+        training site by mistake. Changes nothing on the submission."""
+        if not request.user.email:
+            self.message_user(request, 'Your account has no email address — add one to your user first.', messages.ERROR)
+            return
+        submissions = list(
+            queryset.select_related('bearer', 'season', 'entered_by').order_by('intake_number')[:CONFIRMATION_RETRY_BATCH_LIMIT + 1]
+        )
+        sent = 0
+        for i, submission in enumerate(submissions[:CONFIRMATION_RETRY_BATCH_LIMIT]):
+            if i and BULK_SEND_INTERVAL_SECONDS:
+                time.sleep(BULK_SEND_INTERVAL_SECONDS)
+            try:
+                send_submission_confirmation(submission, staff_copy_to=request.user.email)
+            except Exception as exc:  # noqa: BLE001 — one failure must not stop the rest
+                self.message_user(request, f'Intake #{submission.intake_number} failed: {exc}', messages.ERROR)
+            else:
+                sent += 1
+        self.message_user(request, f'{sent} cop{"y" if sent == 1 else "ies"} sent to {request.user.email}.')
+        if len(submissions) > CONFIRMATION_RETRY_BATCH_LIMIT:
             self.message_user(
                 request,
                 f'Only the first {CONFIRMATION_RETRY_BATCH_LIMIT} were processed this run — run the action again for the rest.',

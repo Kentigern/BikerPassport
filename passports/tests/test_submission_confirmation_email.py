@@ -361,3 +361,68 @@ class TestRetry:
         for submission in (first, second):
             submission.refresh_from_db()
             assert submission.status == PassportSubmission.Status.EMAILED
+
+
+class TestEmailMeCopy:
+    @pytest.fixture(autouse=True)
+    def no_throttle(self, monkeypatch):
+        monkeypatch.setattr('passports.admin.BULK_SEND_INTERVAL_SECONDS', 0)
+
+    def _post(self, client, submission):
+        return client.post(
+            '/admin/passports/passportsubmission/',
+            data={'action': 'email_me_confirmation_copy', '_selected_action': [submission.pk]},
+            follow=True,
+        )
+
+    def test_sends_to_staff_with_bearer_details_and_changes_nothing(self, client, django_user_model, season, venues, monkeypatch):
+        admin = django_user_model.objects.create_superuser(username='admin', email='steve@example.com', password='x')
+        client.force_login(admin)
+        submission = _locked_submission(season, venues, intake_number=7)
+        submission.bearer.mailing_address = '1 Test Street\nTestville'
+        submission.bearer.save()
+        calls = []
+        monkeypatch.setattr('passports.emailing.resend_client.send_email', lambda **kwargs: calls.append(kwargs))
+
+        resp = self._post(client, submission)
+
+        assert b'1 copy sent to steve@example.com' in resp.content
+        assert len(calls) == 1
+        assert calls[0]['to'] == 'steve@example.com'
+        assert 'intake #7' in calls[0]['subject']
+        assert submission.bearer.phone in calls[0]['html_body']
+        assert 'Testville' in calls[0]['html_body']
+        assert 'Venue 1' in calls[0]['html_body']
+        submission.refresh_from_db()
+        assert submission.status != PassportSubmission.Status.EMAILED
+        assert submission.email_sent_at is None
+        assert not RaffleTicket.objects.filter(submission=submission).exists()
+
+    def test_works_for_unlocked_and_no_email_bearer(self, client, django_user_model, season, venues, monkeypatch):
+        admin = django_user_model.objects.create_superuser(username='admin', email='steve@example.com', password='x')
+        client.force_login(admin)
+        submission = _locked_submission(season, venues, email='')
+        PassportSubmission.objects.filter(pk=submission.pk).update(locked_at=None)
+        calls = []
+        monkeypatch.setattr('passports.emailing.resend_client.send_email', lambda **kwargs: calls.append(kwargs))
+
+        self._post(client, submission)
+
+        assert [c['to'] for c in calls] == ['steve@example.com']
+
+    def test_refuses_without_staff_email(self, client, django_user_model, season, venues, monkeypatch):
+        admin = django_user_model.objects.create_superuser(username='admin', email='', password='x')
+        client.force_login(admin)
+        submission = _locked_submission(season, venues)
+        calls = []
+        monkeypatch.setattr('passports.emailing.resend_client.send_email', lambda **kwargs: calls.append(kwargs))
+
+        resp = self._post(client, submission)
+
+        assert b'Your account has no email address' in resp.content
+        assert calls == []
+
+    def test_hidden_from_loggers(self, client, logger_user, season, venues):
+        client.force_login(logger_user)
+        resp = client.get('/admin/passports/passportsubmission/')
+        assert b'email_me_confirmation_copy' not in resp.content

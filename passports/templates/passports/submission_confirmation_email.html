@@ -18,6 +18,24 @@
         </tr>
         <tr>
           <td style="padding:1.5rem; color:#222; font-size:1rem; line-height:1.5;">
+            {% if staff_copy %}
+            {% with bearer=submission.bearer %}
+            <div style="background:#fff8e1; border:1px solid #efdaa4; border-radius:6px; padding:.75rem 1rem; margin-bottom:1.25rem; font-size:.9rem;">
+              <p style="margin:0 0 .5rem;"><strong>Staff copy — not sent to the bearer.</strong></p>
+              <p style="margin:0;">
+                Name: {{ bearer.name }}<br>
+                Phone: {{ bearer.phone }}<br>
+                Email: {{ bearer.email|default:"—" }}<br>
+                Address: {{ bearer.mailing_address|default:"—"|linebreaksbr }}<br>
+                Keep contact details: {{ bearer.get_retention_consent_status_display }}<br>
+                Use for marketing: {{ bearer.get_marketing_consent_status_display }}<br>
+                Intake #{{ submission.intake_number }} · season {{ submission.season }} · received {{ submission.date_received|date:"j M Y" }}<br>
+                Logged by: {% if submission.entered_by %}{{ submission.entered_by.get_full_name|default:submission.entered_by.username }}{% else %}—{% endif %} · Saved &amp; exited: {% if submission.locked_at %}yes{% else %}no{% endif %}{% if submission.voided_at %} · VOIDED{% endif %}<br>
+                Notes: {{ submission.notes|default:"—"|linebreaksbr }}
+              </p>
+            </div>
+            {% endwith %}
+            {% endif %}
             <p>Hi {{ submission.bearer.name }},</p>
             {% if updated %}
             <p><strong>This replaces our earlier email — your passport details have been updated.</strong></p>

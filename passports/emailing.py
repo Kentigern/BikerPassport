@@ -57,16 +57,24 @@ def build_unsubscribe_url(bearer, purpose):
     return f"{settings.PUBLIC_BASE_URL}{path}"
 
 
-def send_submission_confirmation(submission, updated=False):
+def send_submission_confirmation(submission, updated=False, staff_copy_to=None):
     """The confirmation email (§5.3) — sent via Resend the first time a
     submission is saved & exited (see submission_save_view), and again on
     a staff retry (send_confirmations). Just the stamps/venues/tickets
     receipt — transactional, covering only data needed to run the raffle,
     so no consent request. `updated` marks it as replacing an earlier one
     (a corrected submission saved & exited again). Only sends: use
-    send_and_record_confirmation to also record the outcome."""
+    send_and_record_confirmation to also record the outcome.
+
+    `staff_copy_to` sends it to that staff address instead, topped with the
+    bearer's full details (phone, address, consents...) — a way to get a
+    submission's data out, e.g. one logged on the training site by mistake.
+    A staff copy changes nothing: no tickets issued, no status recorded."""
     bearer = submission.bearer
-    tickets = RaffleTicket.objects.ensure_for_submission(submission)
+    if staff_copy_to:
+        tickets = submission.ticket_numbers.order_by('number')
+    else:
+        tickets = RaffleTicket.objects.ensure_for_submission(submission)
     html_body = render_to_string(
         'passports/submission_confirmation_email.html',
         {
@@ -76,11 +84,15 @@ def send_submission_confirmation(submission, updated=False):
             'raffle_tickets': submission.raffle_tickets,
             'ticket_numbers': [ticket.number for ticket in tickets],
             'updated': updated,
+            'staff_copy': bool(staff_copy_to),
         },
     )
+    subject = 'Your Bike + Brew passport has been updated' if updated else 'Your Bike + Brew passport has been processed'
+    if staff_copy_to:
+        subject = f'Copy: intake #{submission.intake_number} ({submission.season}) — {bearer.name}'
     resend_client.send_email(
-        to=bearer.email,
-        subject='Your Bike + Brew passport has been updated' if updated else 'Your Bike + Brew passport has been processed',
+        to=staff_copy_to or bearer.email,
+        subject=subject,
         html_body=html_body,
         text_body=strip_tags(html_body),
     )
