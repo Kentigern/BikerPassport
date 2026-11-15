@@ -7,8 +7,10 @@ full spec) and [README.md](README.md) (setup). **Never put secrets in this repo*
 ## Keeping this file current
 
 Steve works on this repo from more than one machine, each with its own Claude memory that does
-**not** sync — this file is the shared memory. From 5 Oct 2026 his **new laptop** is the
-main one (his desktop is no longer a dev machine); the work PC is occasional. So:
+**not** sync — this file is the shared memory. The laptop that was the main machine from 5 Oct
+2026 **died on 15 Nov 2026** (nothing recovered from it). Since then his **personal desktop
+PC** (`C:\Projects\BikerPassport\BikerPassport`) is the main dev machine again; the work PC is
+occasional. So:
 
 - **Every push includes a CLAUDE.md update.** Before pushing, update "Current
   status", the Day 1 list, "Waiting on Steve", "Parked" and "Gotchas" to match
@@ -112,10 +114,15 @@ Browser tests with pytest-playwright against `live_server`.
   `source /home/cfdfcfde/virtualenv/bikerpassport/3.12/bin/activate && cd /home/cfdfcfde/bikerpassport`.
   The live app is at **staging.bikeandbrew.org** (folder `~/bikerpassport`, `.env` in the app
   folder). **Domain layout decided 29 Sep** ([docs/krystal_migration.md](docs/krystal_migration.md)):
-  Amethyst plan = one domain; the main domain (today Krystal's k-hosting placeholder) becomes
-  **makeyourmark.co.uk** (public WordPress), the app moves to a **subdomain of it**, and
-  **bikeandbrew.org** stays an alias redirecting to the app. On hold with the WordPress handover. Krystal requires the footer
+  **makeyourmark.co.uk** (public WordPress) has been **live on Krystal since 7 Nov 2026**, as a
+  cPanel alias of `public_html` (Krystal allows unlimited aliases, so no main-domain rename was
+  needed). Steve is now MARK's **webmaster** (WordPress handed over); that site is its own repo,
+  **Kentigern/MakeYourMark** (private, `C:\Projects\MakeYourMark`; its CLAUDE.md has the details).
+  Still to do: move the app to a **subdomain of makeyourmark.co.uk** and decide what
+  **bikeandbrew.org** should do (redirect to MARK or to the app). Krystal requires the footer
   credit "Hosting kindly provided by Krystal" (linked) — contractual, don't remove it.
+  Trustee-facing overview of both sites: Claude Docs "Make Your Mark — Websites Handover Guide"
+  (https://claude.ai/artifact/NMSz4v2NF7emHNVQgDjzi5).
 - **Email**: Resend. The verified domain is the **subdomain `passports.makeyourmark.co.uk`**,
   so the sender must be `…@passports.makeyourmark.co.uk` (default
   `noreply@passports.makeyourmark.co.uk`). The bare `makeyourmark.co.uk` is NOT verified.
@@ -177,8 +184,12 @@ the cutover) on hold with the WordPress work. Intake will start at #1 / ticket 0
 - **Railway fixed (25 Sep, 00:18 redeploy):** `DJANGO_DEBUG` was explicitly True — now False
   (verified: http→https 301, HSTS, secure cookies, plain 404, CSRF OK). Misnamed
   `DJANGO_PUBLIC_MESSAGES_ALERT_EMAILS` renamed to `DJANGO_PUBLIC_MESSAGE_ALERT_EMAILS` (same value).
-- The laptop (main machine since 5 Oct) has a dev setup: Python 3.11 `.venv`, `pip install -r requirements-dev.txt`,
-  `playwright install chromium`, Railway CLI via npm; 116 tests pass (13 Oct).
+- The personal desktop PC (main machine again since the laptop died, 15 Nov) has a dev setup:
+  Python 3.11 `.venv`, `pip install -r requirements-dev.txt`, `playwright install chromium`,
+  Railway CLI (linked to "Make Your Mark"), Node.js, GitHub CLI (signed in as Kentigern), WinSCP
+  (saved site "MakeYourMark"), `ssh krystal` alias in `~/.ssh/config`. 120 tests pass (15 Nov,
+  with `DATABASE_URL` pointed at SQLite). The Windows ssh-agent is **not** set up on this PC yet,
+  so Steve types the key passphrase himself and `ssh -o BatchMode=yes krystal` fails.
 
 **Domains:** `bikeandbrew.org` is an alias of the account's main domain. The 24 Sep plan to make it
 a full domain is superseded by the 29 Sep layout (see Hosting above); intake runs on
@@ -200,9 +211,14 @@ RaffleWinner (removed by `reset_intake_data` if Railway becomes the fallback).
 
 Day 1 MVP — remaining (Day 1 may be brought forward at short notice):
 1. Later, raise HSTS (`DJANGO_SECURE_HSTS_SECONDS`) once HTTPS has been solid for a while.
-2. Domain switchover (runbook Phase 3: main domain → makeyourmark.co.uk, app → its subdomain,
-   bikeandbrew.org redirects) — **on hold** with the WordPress handover. Ask Krystal first whether
-   aliases/subdomains count toward the one-domain limit and how to rename the main domain.
+2. Domain switchover, app side (runbook Phase 3): makeyourmark.co.uk is already live on Krystal
+   (7 Nov, done in the MakeYourMark project, no rename). Remaining: app → a subdomain of
+   makeyourmark.co.uk, and bikeandbrew.org's redirect. No longer blocked: Steve is webmaster.
+
+**Deploy hold (15 Nov 2026):** Krystal is at `8140447` (13 Oct). Steve isn't sure he wants
+`f7b1d47` (admin action "email me a copy of a submission's confirmation email") in production.
+**Don't deploy to Krystal** (`deploy_krystal.sh` deploys `master` HEAD) until he decides; if he
+says no, revert that commit on `master` first. Tracked in his second-mind commitments.
 
 Waiting on Steve: recipient lists for `DJANGO_NOTES_ALERT_EMAILS` / `DJANGO_PUBLIC_MESSAGE_ALERT_EMAILS`;
 the boss's wishes for the confirmation email design (it's a hand-coded HTML template —
