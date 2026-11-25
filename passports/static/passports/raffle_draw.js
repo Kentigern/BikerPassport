@@ -10,7 +10,6 @@
   var stage = document.getElementById('stage');
   var emptyState = document.getElementById('empty-state');
   var spinBtn = document.getElementById('spin-btn');
-  var prizeInput = document.getElementById('prize-input');
   var spinStatus = document.getElementById('spin-status');
   var winnersList = document.getElementById('winners-list');
   var revealOverlay = document.getElementById('reveal-overlay');
@@ -129,19 +128,15 @@
     showReveal(winner);
     addToWinnersList(winner);
     remaining -= 1;
-    prizeInput.value = '';
     spinning = false;
     spinBtn.disabled = false;
     refreshAvailability();
   }
 
-  function postSpin(prize) {
-    var body = new URLSearchParams();
-    body.append('prize', prize);
+  function postSpin() {
     return fetch(spinUrl, {
       method: 'POST',
       headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: body.toString(),
     }).then(function (r) { return r.json().then(function (data) { return { status: r.status, data: data }; }); });
   }
 
@@ -152,9 +147,7 @@
     spinBtn.disabled = true;
     spinStatus.textContent = '';
 
-    var prize = prizeInput.value.trim();
-
-    postSpin(prize).then(function (result) {
+    postSpin().then(function (result) {
       if (!result.data.ok) {
         spinning = false;
         spinBtn.disabled = false;
@@ -183,14 +176,6 @@
   // click anything while a winner's name was on screen. Clicking anywhere
   // on it dismisses it, same as any other full-screen reveal/modal.
   revealOverlay.addEventListener('click', hideReveal);
-
-  document.addEventListener('keydown', function (e) {
-    if (document.activeElement === prizeInput) return;
-    if (e.code === 'Space' || e.code === 'Enter') {
-      e.preventDefault();
-      doSpin();
-    }
-  });
 
   buildWheel();
   refreshAvailability();

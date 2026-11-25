@@ -97,6 +97,10 @@ Browser tests with pytest-playwright against `live_server`.
   posted to Steve, or handed over in person at the **3–4 October 2026 event**
   (the most time-pressured case — keep intake fast).
 - Raffle draw: yellow/black roulette wheel only (slot machine removed at MARK's request).
+  25 Nov 2026 (on Railway, not yet Krystal — behind the deploy hold): MARK logo either side of the
+  wheel (`passports/static/passports/mark-logo.svg`, from the WordPress theme; a Bike + Brew logo
+  was wanted but none could be found), wheel lowered, no "Prize (optional)" box (the model's
+  `prize` field stays for old winners), draws only by clicking the button (no Space/Enter shortcut).
 
 ## Hosting
 

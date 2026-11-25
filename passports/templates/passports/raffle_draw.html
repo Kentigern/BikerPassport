@@ -65,11 +65,26 @@
       overflow-y: auto;
     }
 
+    /* The wheel with the MARK logo either side; margin-top lowers it a little
+       below the top-corner links. */
+    #wheel-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: min(5vmin, 3rem);
+      margin-top: 4vh;
+    }
+    .side-logo {
+      width: min(18vmin, 180px);
+      flex-shrink: 0;
+    }
+    .side-logo img { display: block; width: 100%; height: auto; }
+
     :root { --wheel-yellow: #FFD100; }
     #wheel-wrap {
       position: relative;
-      width: min(70vmin, 640px);
-      height: min(70vmin, 640px);
+      width: min(66vmin, 640px);
+      height: min(66vmin, 640px);
     }
     #pointer {
       position: absolute;
@@ -106,16 +121,6 @@
       align-items: center;
       gap: .75rem;
     }
-    #prize-input {
-      padding: .6rem .9rem;
-      font-size: 1rem;
-      border-radius: 6px;
-      border: 1px solid #665f5f;
-      background: #3a3535;
-      color: #efdaa4;
-      min-width: 220px;
-    }
-    #prize-input::placeholder { color: #a89a7d; }
     #spin-btn {
       padding: .8rem 1.6rem;
       font-size: 1.1rem;
@@ -134,11 +139,6 @@
       margin: 0;
       min-height: 1.2em;
     }
-    #hint {
-      color: #a89a7d;
-      font-size: .8rem;
-    }
-
     #winners-panel {
       position: fixed;
       bottom: 1rem;
@@ -237,21 +237,27 @@
 <div id="season-label">{% if season %}Season: {{ season }}{% else %}No active season{% endif %}</div>
 
 <div id="stage">
-  <div id="wheel-wrap">
-    <div id="pointer"></div>
-    <svg id="wheel" viewBox="0 0 400 400">
-      <g id="wheel-g"></g>
-    </svg>
+  <div id="wheel-row">
+    <div class="side-logo">
+      <img src="{% static 'passports/mark-logo.svg' %}" alt="Make Your Mark">
+    </div>
+    <div id="wheel-wrap">
+      <div id="pointer"></div>
+      <svg id="wheel" viewBox="0 0 400 400">
+        <g id="wheel-g"></g>
+      </svg>
+    </div>
+    <div class="side-logo">
+      <img src="{% static 'passports/mark-logo.svg' %}" alt="">
+    </div>
   </div>
 
   <div id="remaining-label"></div>
 
   <div id="controls">
-    <input type="text" id="prize-input" placeholder="Prize (optional)" autocomplete="off">
     <button type="button" id="spin-btn">Draw Next Winner</button>
   </div>
   <p id="spin-status"></p>
-  <p id="hint">Press Space or Enter to draw</p>
 </div>
 
 <div id="empty-state">
