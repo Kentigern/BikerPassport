@@ -106,15 +106,6 @@
       box-shadow: 0 0 0 .5rem var(--wheel-yellow), 0 0 40px rgba(0, 0, 0, .5);
       transition: transform 5s cubic-bezier(.15, .85, .35, 1);
     }
-    #remaining-label {
-      background: rgba(43, 39, 39, .85);
-      color: #efdaa4;
-      padding: .6rem 1.1rem;
-      border-radius: 999px;
-      font-weight: bold;
-      font-size: 1rem;
-      white-space: nowrap;
-    }
 
     #controls {
       display: flex;
@@ -198,11 +189,6 @@
       color: #efdaa4;
       text-shadow: 0 0 30px rgba(239, 218, 164, .5);
     }
-    #reveal-tickets {
-      font-size: clamp(1rem, 2vw, 1.3rem);
-      color: #c9b998;
-      margin: .75rem 0 0;
-    }
     #reveal-ticket-number {
       font-size: clamp(.9rem, 1.6vw, 1.1rem);
       color: #a89a7d;
@@ -252,7 +238,6 @@
     </div>
   </div>
 
-  <div id="remaining-label"></div>
 
   <div id="controls">
     <button type="button" id="spin-btn">Draw Next Winner</button>
@@ -277,7 +262,6 @@
   <div id="reveal-card">
     <p id="reveal-prize"></p>
     <p id="reveal-name"></p>
-    <p id="reveal-tickets"></p>
     <p id="reveal-ticket-number"></p>
   </div>
 </div>

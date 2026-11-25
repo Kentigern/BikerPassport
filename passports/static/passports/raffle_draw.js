@@ -15,9 +15,7 @@
   var revealOverlay = document.getElementById('reveal-overlay');
   var revealName = document.getElementById('reveal-name');
   var revealPrize = document.getElementById('reveal-prize');
-  var revealTickets = document.getElementById('reveal-tickets');
   var revealTicketNumber = document.getElementById('reveal-ticket-number');
-  var remainingLabel = document.getElementById('remaining-label');
 
   var spinning = false;
 
@@ -79,7 +77,6 @@
 
   // --- Shared draw flow --------------------------------------------------
   function refreshAvailability() {
-    remainingLabel.textContent = remaining + (remaining === 1 ? ' entrant' : ' entrants');
     if (remaining <= 0) {
       stage.style.display = 'none';
       emptyState.style.display = 'block';
@@ -108,7 +105,6 @@
   function showReveal(winner) {
     revealName.textContent = winner.name;
     revealPrize.textContent = winner.prize ? winner.prize : '';
-    revealTickets.textContent = winner.tickets + (winner.tickets === 1 ? ' ticket' : ' tickets');
     revealTicketNumber.textContent = 'Ticket #' + winner.ticket_number;
     revealOverlay.style.display = 'flex';
     spawnConfetti();

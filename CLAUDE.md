@@ -52,6 +52,12 @@ Browser tests with pytest-playwright against `live_server`.
   phone before they can edit a bearer or see their phone. Superusers and (since 2 Oct 2026, as MARK
   has effectively one) Site Admins skip this check (`access.is_privileged`).
 - **Save & Exit locks** a submission (and its bearer) for Loggers; Site Admins/superusers can still edit.
+- **Closing passport logging** (25 Nov 2026, migration `0030`, not yet on Krystal — deploy hold):
+  untick **Passport logging open** on the season (Admin → Seasons, editable in the list). Loggers
+  then see "Passport logging is closed until next season" instead of Log a Submission; the intake
+  form redirects them, the save endpoints refuse them, and they can't edit bearers/submissions in
+  the admin (`access.is_logging_closed`, also checked inside `is_submission_editable` /
+  `is_bearer_editable`). Site Admins/superusers can still log and correct. Tick again to reopen.
 - **Raffle tickets** (`RaffleTicket`): issued at Save & Exit for every locked submission,
   email or not; sequential per season, zero-padded 6 digits (`000001`); **never
   renumbered or removed** once issued (they've been emailed). The export and the
@@ -100,7 +106,9 @@ Browser tests with pytest-playwright against `live_server`.
   25 Nov 2026 (on Railway, not yet Krystal — behind the deploy hold): MARK logo either side of the
   wheel (`passports/static/passports/mark-logo.svg`, from the WordPress theme; a Bike + Brew logo
   was wanted but none could be found), wheel lowered, no "Prize (optional)" box (the model's
-  `prize` field stays for old winners), draws only by clicking the button (no Space/Enter shortcut).
+  `prize` field stays for old winners), draws only by clicking the button (no Space/Enter shortcut), and (the boss's request) no
+  "N entrants" label under the wheel and no "N tickets" on the winner reveal (name and winning
+  ticket number only).
 
 ## Hosting
 

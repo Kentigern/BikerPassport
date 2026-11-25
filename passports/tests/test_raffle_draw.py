@@ -34,11 +34,10 @@ def test_draw_records_winner_and_excludes_them_from_future_draws(season, venues,
     _login_to_draw_page(page, live_server, staff_user)
 
     # The wheel itself is a fixed, decorative 24-pocket roulette wheel
-    # regardless of entrant count — only the "N entrants" label reflects
-    # who's actually eligible.
+    # regardless of entrant count; the count isn't shown (MARK's request).
     page.wait_for_selector('#wheel-g path')
     assert page.locator('#wheel-g path').count() == 24
-    assert page.locator('#remaining-label').inner_text() == '3 entrants'
+    assert page.locator('#pool-count').input_value() == '3'
 
     page.click('#spin-btn')
     page.wait_for_selector("#reveal-overlay[style*='flex']", timeout=8000)
@@ -47,13 +46,14 @@ def test_draw_records_winner_and_excludes_them_from_future_draws(season, venues,
     winner = RaffleWinner.objects.get(season=season)
     assert winner.bearer in bearers
     assert winner.ticket_count == 2
-    assert page.locator('#remaining-label').inner_text() == '2 entrants'
+    # Neither the entrant count nor the winner's ticket count is shown.
+    assert 'entrant' not in page.content() and '2 tickets' not in page.locator('#reveal-card').inner_text()
 
     # A fresh load recomputes the count from RaffleWinner — the winner must
     # not be drawable again.
     page.reload()
     page.wait_for_selector('#wheel-g path')
-    assert page.locator('#remaining-label').inner_text() == '2 entrants'
+    assert page.locator('#pool-count').input_value() == '2'
 
 
 def test_wheel_reveals_matching_ticket_number(season, venues, staff_user, page, live_server):
