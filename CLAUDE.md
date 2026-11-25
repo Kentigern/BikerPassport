@@ -52,7 +52,7 @@ Browser tests with pytest-playwright against `live_server`.
   phone before they can edit a bearer or see their phone. Superusers and (since 2 Oct 2026, as MARK
   has effectively one) Site Admins skip this check (`access.is_privileged`).
 - **Save & Exit locks** a submission (and its bearer) for Loggers; Site Admins/superusers can still edit.
-- **Closing passport logging** (25 Nov 2026, migration `0030`, being released to Krystal 25 Nov):
+- **Closing passport logging** (25 Nov 2026, migration `0030`, live on Krystal):
   untick **Passport logging open** on the season (Admin → Seasons, editable in the list). Loggers
   then see "Passport logging is closed until next season" instead of Log a Submission; the intake
   form redirects them, the save endpoints refuse them, and they can't edit bearers/submissions in
@@ -65,12 +65,12 @@ Browser tests with pytest-playwright against `live_server`.
 - **Confirmation email** (§5.3): sent at Save & Exit via Resend, transactional —
   **no consent request** in it (raffle data needs none). Failures set
   `email_send_failed`; staff retry via the admin action or `retry_confirmation_emails`.
-  Since 4 Oct 2026 (not yet released): a later Save & Exit of an already-locked submission (only
+  Since 4 Oct 2026 (live on Krystal): a later Save & Exit of an already-locked submission (only
   Site Admins/superusers can — correcting a Logger's premature exit) emails again, subject "…has
   been updated", headed "This replaces our earlier email". Save & Exit now asks "Finished entering
   all the stamps?" first (Cancel = nothing saved). Earlier corrected submissions: resend via the
   admin action.
-- **Voiding a submission** (13 Oct 2026, migration `0029`, not yet released): for a bearer who
+- **Voiding a submission** (13 Oct 2026, migration `0029`, live on Krystal): for a bearer who
   broke the one-per-season rule by submitting again under another phone (the DB constraint can't
   catch that). Superuser-only admin action "Void submission and its raffle tickets" on Passport
   submissions, with a confirmation page and a required reason. Nothing is deleted: the submission
@@ -82,7 +82,7 @@ Browser tests with pytest-playwright against `live_server`.
 - **Notes alert**: Save & Exit with anything in Notes emails `DJANGO_NOTES_ALERT_EMAILS`.
 - **Public page** `/message/` is the **ambassador venue report** (since 29 Sep 2026; was a general
   contact form): ambassador name/number, venue name/number (must be a real venue), today's
-  date (server-set), collected kit (unused passports + count, stamp, 2nd stamp, inkpad, folder, stationery, passports for validation + count — `0028`, 2 Oct, not yet released),
+  date (server-set), collected kit (unused passports + count, stamp, 2nd stamp, inkpad, folder, stationery, passports for validation + count — `0028`, 2 Oct, live on Krystal),
   notes, optional reply contact. Plain text only (letters, digits, ordinary punctuation). Off
   unless `DJANGO_PUBLIC_MESSAGES_ENABLED=True`; login-page link "Ambassador? Send a venue report".
 - **Consent can't be sought by email.** MARK may not email bearers whose address it holds
@@ -103,7 +103,7 @@ Browser tests with pytest-playwright against `live_server`.
   posted to Steve, or handed over in person at the **3–4 October 2026 event**
   (the most time-pressured case — keep intake fast).
 - Raffle draw: yellow/black roulette wheel only (slot machine removed at MARK's request).
-  25 Nov 2026 (being released to Krystal 25 Nov): MARK logo either side of the
+  25 Nov 2026 (live on Krystal): MARK logo either side of the
   wheel (`passports/static/passports/mark-logo.svg`, from the WordPress theme; a Bike + Brew logo
   was wanted but none could be found), wheel lowered, no "Prize (optional)" box (the model's
   `prize` field stays for old winners), draws only by clicking the button (no Space/Enter shortcut), and (the boss's request) no
@@ -165,8 +165,7 @@ read-only) shows who saved anything in the last 15/60 min, the last save, and un
 moments, and never run load-test cleanup there.
 
 **Ambassador venue report (29 Sep):** replaces the public message form (migration `0023`, 78 tests
-pass, checked in a browser). On Railway via the 29 Sep push; **not yet on Krystal** — release there
-with `git pull`, `migrate`, restart (no collectstatic) when Steve is ready for ambassadors to see it.
+pass, checked in a browser). Live on Krystal since 1 Oct.
 
 **Railway is a test site again (29 Sep):** web app running, GitHub reconnected (deploys on push to
 `master`), every pre-existing account inactive except `Kentigern`, plus Steve's new test users;
@@ -227,11 +226,11 @@ Day 1 MVP — remaining (Day 1 may be brought forward at short notice):
    (7 Nov, done in the MakeYourMark project, no rename). Remaining: app → a subdomain of
    makeyourmark.co.uk, and bikeandbrew.org's redirect. No longer blocked: Steve is webmaster.
 
-**Deploy hold lifted (25 Nov 2026):** Steve decided `f7b1d47` (admin action "email me a copy of a
-submission's confirmation email") goes to production. Krystal was at `8140447` (13 Oct); the 25 Nov
-release takes it to `master`: `f7b1d47`, the raffle draw page changes and the logging switch
-(`0030`). Steve runs the deploy (SSH key needs his passphrase); confirm it succeeded, then
-update these notes. Close the matching second-mind commitment.
+**Krystal is current (25 Nov 2026):** deployed OK from `master` (migrations up to `0030`), lifting
+the 15 Nov deploy hold: Steve decided `f7b1d47` (admin action "email me a copy of a submission's
+confirmation email") goes to production. Released with it: the raffle draw page changes and the
+**Passport logging open** switch (open until Steve unticks it for 2026). Steve runs deploys himself
+(`ssh krystal`, his key's passphrase; or cPanel Terminal). Close the matching second-mind commitment.
 
 Waiting on Steve: recipient lists for `DJANGO_NOTES_ALERT_EMAILS` / `DJANGO_PUBLIC_MESSAGE_ALERT_EMAILS`;
 the boss's wishes for the confirmation email design (it's a hand-coded HTML template —
