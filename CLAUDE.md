@@ -52,7 +52,7 @@ Browser tests with pytest-playwright against `live_server`.
   phone before they can edit a bearer or see their phone. Superusers and (since 2 Oct 2026, as MARK
   has effectively one) Site Admins skip this check (`access.is_privileged`).
 - **Save & Exit locks** a submission (and its bearer) for Loggers; Site Admins/superusers can still edit.
-- **Closing passport logging** (25 Nov 2026, migration `0030`, not yet on Krystal — deploy hold):
+- **Closing passport logging** (25 Nov 2026, migration `0030`, being released to Krystal 25 Nov):
   untick **Passport logging open** on the season (Admin → Seasons, editable in the list). Loggers
   then see "Passport logging is closed until next season" instead of Log a Submission; the intake
   form redirects them, the save endpoints refuse them, and they can't edit bearers/submissions in
@@ -103,7 +103,7 @@ Browser tests with pytest-playwright against `live_server`.
   posted to Steve, or handed over in person at the **3–4 October 2026 event**
   (the most time-pressured case — keep intake fast).
 - Raffle draw: yellow/black roulette wheel only (slot machine removed at MARK's request).
-  25 Nov 2026 (on Railway, not yet Krystal — behind the deploy hold): MARK logo either side of the
+  25 Nov 2026 (being released to Krystal 25 Nov): MARK logo either side of the
   wheel (`passports/static/passports/mark-logo.svg`, from the WordPress theme; a Bike + Brew logo
   was wanted but none could be found), wheel lowered, no "Prize (optional)" box (the model's
   `prize` field stays for old winners), draws only by clicking the button (no Space/Enter shortcut), and (the boss's request) no
@@ -227,10 +227,11 @@ Day 1 MVP — remaining (Day 1 may be brought forward at short notice):
    (7 Nov, done in the MakeYourMark project, no rename). Remaining: app → a subdomain of
    makeyourmark.co.uk, and bikeandbrew.org's redirect. No longer blocked: Steve is webmaster.
 
-**Deploy hold (15 Nov 2026):** Krystal is at `8140447` (13 Oct). Steve isn't sure he wants
-`f7b1d47` (admin action "email me a copy of a submission's confirmation email") in production.
-**Don't deploy to Krystal** (`deploy_krystal.sh` deploys `master` HEAD) until he decides; if he
-says no, revert that commit on `master` first. Tracked in his second-mind commitments.
+**Deploy hold lifted (25 Nov 2026):** Steve decided `f7b1d47` (admin action "email me a copy of a
+submission's confirmation email") goes to production. Krystal was at `8140447` (13 Oct); the 25 Nov
+release takes it to `master`: `f7b1d47`, the raffle draw page changes and the logging switch
+(`0030`). Steve runs the deploy (SSH key needs his passphrase); confirm it succeeded, then
+update these notes. Close the matching second-mind commitment.
 
 Waiting on Steve: recipient lists for `DJANGO_NOTES_ALERT_EMAILS` / `DJANGO_PUBLIC_MESSAGE_ALERT_EMAILS`;
 the boss's wishes for the confirmation email design (it's a hand-coded HTML template —
