@@ -19,6 +19,7 @@ from django.views.decorators.http import require_POST
 from .access import (
     is_bearer_editable,
     is_bearer_verified,
+    is_logging_closed,
     is_site_admin,
     is_submission_editable,
     mark_bearer_verified,
@@ -72,9 +73,12 @@ def _require_perm(request, perm, message):
     return None
 
 
+LOGGING_CLOSED_MESSAGE = 'Passport logging is closed until next season.'
+
+
 @staff_member_required
 def landing_view(request):
-    return render(request, 'passports/landing.html')
+    return render(request, 'passports/landing.html', {'logging_closed': is_logging_closed(request.user)})
 
 
 def _ranked(queryset, count_attr):
@@ -533,6 +537,8 @@ def audit_log_view(request):
 
 @staff_member_required
 def submission_form_view(request, pk=None):
+    if is_logging_closed(request.user):
+        return redirect('landing')
     submission = get_object_or_404(PassportSubmission, pk=pk) if pk else None
     read_only = False
 
@@ -576,6 +582,8 @@ def submission_form_view(request, pk=None):
 
 @staff_member_required
 def bearer_save_view(request):
+    if is_logging_closed(request.user):
+        return _permission_denied_json(LOGGING_CLOSED_MESSAGE)
     bearer_id = request.POST.get('bearer_id') or None
 
     if bearer_id is None:
@@ -619,6 +627,8 @@ def bearer_save_view(request):
 
 @staff_member_required
 def submission_save_view(request):
+    if is_logging_closed(request.user):
+        return _permission_denied_json(LOGGING_CLOSED_MESSAGE)
     bearer_id = request.POST.get('bearer_id')
     if not bearer_id:
         return JsonResponse(

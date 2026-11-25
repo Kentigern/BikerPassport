@@ -42,6 +42,16 @@ def is_privileged(user):
     return user.is_superuser or is_site_admin(user)
 
 
+def is_logging_closed(user):
+    """Passport logging is over for the current season (Season.logging_open
+    unticked): a Passport Logger can't add or change submissions or bearers.
+    Site Admins and superusers still can, for corrections."""
+    if is_privileged(user):
+        return False
+    season = Season.objects.current()
+    return season is not None and not season.logging_open
+
+
 def is_submission_editable(user, submission):
     """A submission becomes read-only to a Passport Logger the first time it
     is saved & exited (PassportSubmission.locked_at gets set by
@@ -54,6 +64,8 @@ def is_submission_editable(user, submission):
         return False
     if is_privileged(user):
         return True
+    if not submission.season.logging_open:
+        return False
     return submission.locked_at is None
 
 
@@ -68,6 +80,8 @@ def is_bearer_editable(user, bearer):
     season = Season.objects.current()
     if season is None:
         return True
+    if not season.logging_open:
+        return False
     return not bearer.submissions.filter(season=season, locked_at__isnull=False).exists()
 
 

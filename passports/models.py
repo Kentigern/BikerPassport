@@ -53,6 +53,13 @@ class Season(models.Model):
         help_text="Days after raffle_concluded_at before a declined/non-responding "
         "bearer's data is purged (§9 — admin-configurable; spec sets no fixed default).",
     )
+    logging_open = models.BooleanField(
+        'passport logging open',
+        default=True,
+        help_text="Untick when the season's passport logging is over: Passport Loggers can then "
+        "no longer add or change submissions or bearers. Site Admins and superusers still can, "
+        "for corrections. Tick again to reopen.",
+    )
 
     class Meta:
         ordering = ['-name']

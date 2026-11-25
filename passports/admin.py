@@ -74,8 +74,8 @@ admin.site.index = _role_aware_admin_index
 
 @admin.register(Season)
 class SeasonAdmin(admin.ModelAdmin):
-    list_display = ['name', 'is_current', 'raffle_concluded_at', 'retention_grace_period_days']
-    list_editable = ['is_current']
+    list_display = ['name', 'is_current', 'logging_open', 'raffle_concluded_at', 'retention_grace_period_days']
+    list_editable = ['is_current', 'logging_open']
 
 
 @admin.register(Venue)

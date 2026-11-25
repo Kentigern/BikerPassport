@@ -45,6 +45,11 @@
       margin-bottom: 2.5rem;
       font-style: italic;
     }
+    .closed-note {
+      font-size: 1.15rem;
+      line-height: 1.5;
+      color: #efdaa4;
+    }
     .big-button {
       display: inline-block;
       font-size: 1.6rem;
@@ -85,7 +90,11 @@
 <div class="card">
   <h1>Logger Dashboard</h1>
   <p class="tagline">Ride united. Heal united.</p>
-  <a class="big-button" href="{% url 'submission_new' %}">Log a Submission</a>
+  {% if logging_closed %}
+    <p class="closed-note">Passport logging is closed until next season. Thank you for all your help!</p>
+  {% else %}
+    <a class="big-button" href="{% url 'submission_new' %}">Log a Submission</a>
+  {% endif %}
 </div>
 
 <p class="hosting-footer">Hosting kindly provided by <a href="https://krystal.io" target="_blank" rel="noopener">Krystal</a></p>
