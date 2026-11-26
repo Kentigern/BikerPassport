@@ -65,7 +65,7 @@
     // than resetting between spins (large rotate() values are fine — no
     // practical limit — and it looks more like a wheel that keeps
     // spinning than one that silently snaps back each time).
-    var extraTurns = 6 + Math.floor(Math.random() * 3);
+    var extraTurns = 18 + Math.floor(Math.random() * 7);
     currentRotation += extraTurns * 360 + Math.random() * 360;
     wheelSvg.style.transform = 'rotate(' + currentRotation + 'deg)';
 

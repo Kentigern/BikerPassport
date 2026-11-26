@@ -109,6 +109,8 @@ Browser tests with pytest-playwright against `live_server`.
   `prize` field stays for old winners), draws only by clicking the button (no Space/Enter shortcut), and (the boss's request) no
   "N entrants" label under the wheel and no "N tickets" on the winner reveal (name and winning
   ticket number only).
+  26 Nov 2026 (on `master`/Railway for Steve to eyeball, **not yet on Krystal**): the spin is
+  15 s (was 5 s) with 18–24 turns (was 6–8), so the same speed for longer. Draw tests wait up to 20 s.
 
 ## Hosting
 

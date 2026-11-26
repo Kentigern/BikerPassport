@@ -40,7 +40,7 @@ def test_draw_records_winner_and_excludes_them_from_future_draws(season, venues,
     assert page.locator('#pool-count').input_value() == '3'
 
     page.click('#spin-btn')
-    page.wait_for_selector("#reveal-overlay[style*='flex']", timeout=8000)
+    page.wait_for_selector("#reveal-overlay[style*='flex']", timeout=20000)
 
     assert RaffleWinner.objects.filter(season=season).count() == 1
     winner = RaffleWinner.objects.get(season=season)
@@ -67,7 +67,7 @@ def test_wheel_reveals_matching_ticket_number(season, venues, staff_user, page, 
     assert sorted(fills) == ['#111111', '#FFD100']
 
     page.click('#spin-btn')
-    page.wait_for_selector("#reveal-overlay[style*='flex']", timeout=8000)
+    page.wait_for_selector("#reveal-overlay[style*='flex']", timeout=20000)
 
     winner = RaffleWinner.objects.get(season=season)
     # The revealed number is the winner's own issued ticket — the one their
